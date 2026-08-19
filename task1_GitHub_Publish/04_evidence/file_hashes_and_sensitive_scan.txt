@@ -1,0 +1,39 @@
+# 2026-08-19 文件哈希与敏感信息排查证据
+## 哈希对比
+\3f1ddcdb6f7ddc2d3e0a568067335b32 *F:\\AgenticCoding\\Portable_Agent_Project_Framework\\GlobalRules\\AGENTS.md
+\1ba3e2c14a3ee45c57d95efc50b7fc37 *F:\\AgenticCoding\\Portable_Agent_Project_Framework\\ProjectRules\\AGENTS.md
+\8eaa3c8a019b5be15e9873c02bf42785 *F:\\AgenticCoding\\Portable_Agent_Project_Framework\\ProjectRules\\SCHEMA.md
+\73310f104d43d51d02abc763787a1143 *F:\\AgenticCoding\\Portable_Agent_Project_Framework\\ProjectRules\\TASK_STATE_MACHINE.md
+\1ba3e2c14a3ee45c57d95efc50b7fc37 *F:\\AgenticCoding\\AGENTS.md
+\8eaa3c8a019b5be15e9873c02bf42785 *F:\\AgenticCoding\\SCHEMA.md
+\73310f104d43d51d02abc763787a1143 *F:\\AgenticCoding\\TASK_STATE_MACHINE.md
+## 压缩包内容
+Archive:  F:\AgenticCoding\Portable_Agent_Project_Framework.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+    15714  2026-08-19 09:51   AGENTS.md
+    14898  2026-08-19 09:51   TASK_STATE_MACHINE.md
+    17037  2026-08-19 09:51   SCHEMA.md
+---------                     -------
+    47649                     3 files
+## 敏感模式扫描（C:/Users、用户名占位、token/密钥、邮箱）
+ugrep: error: error at position 110
+cret|token|password|@[a-z0-9.-]+\.(com|cn|net|org)
+                                mismatched ( )___/
+
+
+（无命中）
+
+## 敏感扫描（修正后，分模式）
+模式1 绝对路径/用户名: 无命中
+模式2 密钥/令牌: 命中均为误报（asset、Secret Store 一般性表述、密钥注入机制 等普通词汇）
+模式3 邮箱: 命中均为误报（P-R0003-001@rev2 之类的 ID 格式）
+结论: 待发布 4 个文件无个人敏感信息，可公开。
+
+## 步骤0后哈希（2026-08-19T19:22+08:00，规则添加后）
+e037b5aea4168ece918d90120bec8d76 *AGENTS.md（工作区根）
+e037b5aea4168ece918d90120bec8d76 *Portable_Agent_Project_Framework\ProjectRules\AGENTS.md（与工作区根一致 ✓）
+a8068454d9db9b6d0f91ceddd80b9029 *Portable_Agent_Project_Framework\GlobalRules\AGENTS.md（已修改，含新规则）
+新规则位置：
+- 工作区根/ProjectRules: §4.1 Plan Gate 末尾
+- GlobalRules: §2.3 沟通效率 末尾

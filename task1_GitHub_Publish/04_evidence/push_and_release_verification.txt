@@ -1,0 +1,14 @@
+# 2026-08-19 推送与 Release 验证证据
+## 推送验证
+- 本地 HEAD: c18e8e815950378a7275716dc00354c35860da85
+- 远端 main: c18e8e815950378a7275716dc00354c35860da85（一致）
+- 仓库: https://github.com/canpus/portable-agent-project-operating-protocol (PUBLIC)
+- 文件列表: GlobalRules/ LICENSE ProjectRules/ README.md README_EN.md
+## Release
+- v0.1.0: https://github.com/canpus/portable-agent-project-operating-protocol/releases/tag/v0.1.0
+- 资产: portable-agent-project-operating-protocol-v0.1.0.zip
+## 资产验证（下载比对）
+- zip SHA256[:16]: 远端 48cf7f880b4154bc = 本地 48cf7f880b4154bc MATCH
+- 解压 4 文件与仓库源码哈希 ALL MATCH
+## Topics
+agents, agmd, ai-agents, claude-code, codex, cursor, memory, state-machine
