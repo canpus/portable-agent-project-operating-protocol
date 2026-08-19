@@ -78,7 +78,7 @@ portable-agent-project-operating-protocol/
 ```
 
 - `GlobalRules/AGENTS.md` — **install once, applies to all projects.** It's the "behavior constitution": no hallucination, protect your existing files, no unauthorized data sharing, no touching system settings…
-- `ProjectRules/` (3 files) — **install once per project.** They define the full lifecycle of an "agent task": requirements confirmation → plan → your approval → implementation → acceptance → history, plus the exact format of the three ledgers.
+- `ProjectRules/` (4 files) — **install once per project.** They define the full lifecycle of an "agent task": requirements confirmation → plan → your approval → implementation → acceptance → history, plus the exact format of the three ledgers.
 
 > Note: the rule files themselves are written in Chinese. That's fine — AI assistants understand Chinese rules no matter what language you chat in. You may translate them, but keeping the originals avoids translation drift in the rules that govern your work.
 
@@ -202,7 +202,7 @@ On macOS replace `C:\Users\Xiaoming\` with `/Users/Xiaoming/`; on Linux with `/h
 
 ## 6. Step 2 — Install the Project Discipline (ProjectRules)
 
-**What this does:** copy the **3 files** from `ProjectRules/` into the root of the project you want to manage. The AI then follows the "plan → your approval → implement → keep ledgers" workflow inside that project.
+**What this does:** copy the **4 files** from `ProjectRules/` into the root of the project you want to manage. The AI then follows the "plan → your approval → implement → keep ledgers" workflow inside that project.
 
 ### 6.1 Steps
 
@@ -212,12 +212,12 @@ On macOS replace `C:\Users\Xiaoming\` with `/Users/Xiaoming/`; on Linux with `/h
    - `TASK_STATE_MACHINE.md`
    - `SCHEMA.md`
 2. **All four files must sit in the same folder, next to each other** (`AGENTS.md` references the other three by relative filename — separated files won't be found).
-3. If your project root already has an `AGENTS.md` (e.g. team rules), don't overwrite it — merge the contents, or put the `ProjectRules` trio in a subfolder and add a one-line reference from the existing `AGENTS.md` (see FAQ "My project already has an AGENTS.md").
+3. If your project root already has an `AGENTS.md` (e.g. team rules), don't overwrite it — merge the contents, or put the `ProjectRules` quartet in a subfolder and add a one-line reference from the existing `AGENTS.md` (see FAQ "My project already has an AGENTS.md").
 4. How each tool reads project-level rules (filenames differ from the global level):
 
 | Tool | Project-level reading |
 |------|----------------------|
-| ZCode / Codex / Copilot / Cursor | `AGENTS.md` at the project root is auto-read (keep all three files as-is in the root) |
+| ZCode / Codex / Copilot / Cursor | `AGENTS.md` at the project root is auto-read (keep all four files as-is in the root) |
 | Claude Code | `CLAUDE.md` at the project root is auto-read — **copy `AGENTS.md` and rename it `CLAUDE.md`** in the project root (keeping `AGENTS.md` too is fine) |
 | Windsurf | root `AGENTS.md` is always active; content can also go into `.windsurf/rules/*.md` |
 
@@ -334,7 +334,7 @@ Hard requirements in the constitution include:
 No. Everything is plain-text `.md` files — copy and paste. No configuration changes to your AI tool (other than placing the rule files correctly).
 
 **Q2: Will these rules mess with my code?**
-No. The rules require: plan → your approval before modifying project files; read-only investigation only before approval; minimal modifications that preserve your existing content. All ledgers live in `_agent_tasks/`, separate from your project files.
+No. The rules require: plan → your approval before modifying project files; read-only investigation only before approval; minimal modifications that preserve your existing content. All ledgers live in `tasks/`, separate from your project files.
 
 **Q3: I use two tools (e.g. Codex + Claude Code). How many copies?**
 Project level: one `AGENTS.md` in the project root works for both; for Claude Code, also copy it as `CLAUDE.md`. Global level: one copy per tool (per section 5.2). Having multiple copies of identical rules is harmless.
