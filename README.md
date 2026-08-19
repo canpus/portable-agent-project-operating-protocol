@@ -89,7 +89,7 @@ portable-agent-project-operating-protocol/
 3. **一个项目文件夹**（你想让 AI 帮忙干的活所在的文件夹）
 4. **能新建文件/文件夹、能复制粘贴** —— 就这么多
 
-> 不知道"用户名"是什么？以 Windows 为例：打开文件资源管理器，进入 `C:\Users\`，里面那个以你的名字命名的文件夹就是你的用户名目录。下文所有路径里的 **`你的用户名`** 是占位符：复制路径时把它**换成你的真实用户名**（比如你的目录叫 `ZhangSan`，就把 `C:\Users\你的用户名\` 写成 `C:\Users\ZhangSan\`）。**`你的用户名` 指的是你在电脑上设置的用户名（登录系统时用的那个名字），不要直接照填"你的用户名"这四个字——除非你的用户名真的就叫"你的用户名"**。**不要把"你的用户名"这四个字原样留在路径里，也不要给它添加任何括号（`( )`、`[ ]`、`{ }`、`< >` 都不行）**。
+> 以 Windows 为例：`C:\Users\` 里面那个以你的名字命名的文件夹，就是**你的用户名对应的那个文件夹**。下文所有路径里的 `你的用户名` 都指它——把它换成你的实际用户名即可（比如你的文件夹叫 `ZhangSan`）。**不要照填"你的用户名"这四个字，也不要加任何括号（`( )` `[ ]` `{ }` `< >`）**。
 
 ---
 
@@ -116,7 +116,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.zcode\AGENTS.md` | `AGENTS.md`（不用改） |
 | macOS | `/Users/你的用户名/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
-| Linux | `/home/xiaoming/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
+| Linux | `/home/你的用户名/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
 
 - 没有 `.zcode` 文件夹就新建一个。
 - 放好后，ZCode 的**每一个**会话都会自动注入这份宪法。
@@ -127,7 +127,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.codex\AGENTS.md` | `AGENTS.md`（不用改） |
 | macOS | `/Users/你的用户名/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
-| Linux | `/home/xiaoming/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
+| Linux | `/home/你的用户名/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
 
 - 小知识：Codex 还会优先读 `C:\Users\你的用户名\.codex\AGENTS.override.md`（同一层二选一，谁存在读谁）。如果你已经有这个 override 文件，把宪法内容放进 override 文件即可，效果一样。
 - 注意：**不要**把文件放进项目内部的 `.codex` 文件夹——官方只认用户目录 `~/.codex` 和项目根目录的 `AGENTS.md`。
@@ -138,7 +138,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.claude\CLAUDE.md` | **先把 `AGENTS.md` 重命名为 `CLAUDE.md`** |
 | macOS | `/Users/你的用户名/.claude/CLAUDE.md` | 同上 |
-| Linux | `/home/xiaoming/.claude/CLAUDE.md` | 同上 |
+| Linux | `/home/你的用户名/.claude/CLAUDE.md` | 同上 |
 
 - 第一步：把 `GlobalRules/AGENTS.md` **重命名**为 `CLAUDE.md`（复制一份再改名，原文件保留也没关系）。
 - 第二步：把改好名的文件放进 `C:\Users\你的用户名\.claude\`（没有 `.claude` 文件夹就新建）。
@@ -159,7 +159,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.cursor\rules\global.mdc` | 内容粘贴进去，扩展名必须是 `.mdc` |
 | macOS | `/Users/你的用户名/.cursor/rules/global.mdc` | 同上 |
-| Linux | `/home/xiaoming/.cursor/rules/global.mdc` | 同上 |
+| Linux | `/home/你的用户名/.cursor/rules/global.mdc` | 同上 |
 
 > 稳妥做法：优先用"设置 → Rules"粘贴，文件方式作为备选。
 
@@ -169,7 +169,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.copilot\instructions\global.instructions.md` | 扩展名必须是 `.instructions.md` |
 | macOS | `/Users/你的用户名/.copilot/instructions/global.instructions.md` | 同上 |
-| Linux | `/home/xiaoming/.copilot/instructions/global.instructions.md` | 同上 |
+| Linux | `/home/你的用户名/.copilot/instructions/global.instructions.md` | 同上 |
 
 - 没有 `.copilot\instructions` 文件夹就逐级新建。
 - 如果你用的是 Copilot 命令行版（copilot CLI），还可以用单文件方式：`C:\Users\你的用户名\.copilot\copilot-instructions.md`（内容同样整份粘贴）。
@@ -180,7 +180,7 @@ portable-agent-project-operating-protocol/
 |------|----------|--------|
 | Windows | `C:\Users\你的用户名\.codeium\windsurf\memories\global_rules.md` | 文件名固定为 `global_rules.md` |
 | macOS | `/Users/你的用户名/.codeium/windsurf/memories/global_rules.md` | 同上 |
-| Linux | `/home/xiaoming/.codeium/windsurf/memories/global_rules.md` | 同上 |
+| Linux | `/home/你的用户名/.codeium/windsurf/memories/global_rules.md` | 同上 |
 
 - 把 `GlobalRules/AGENTS.md` 的内容**整份粘贴替换**进 `global_rules.md`（注意：该文件有 6000 字符上限，如果内容放不下，可以只保留宪法的核心章节）。
 - 也可以在 Windsurf 的 Cascade 面板右上角 Customizations 图标里编辑全局规则。

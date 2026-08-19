@@ -91,7 +91,7 @@ portable-agent-project-operating-protocol/
 3. **A project folder** (the folder containing the work you want the AI to help with)
 4. **The ability to create folders and copy-paste files** — that's all
 
-> Don't know what "username" means? On Windows, open File Explorer and go to `C:\Users\` — the folder named after you is your user directory. In every path below, **`your username`** is a placeholder: when copying a path, **replace it with your real username** (e.g. if your folder is `ZhangSan`, write `C:\Users\ZhangSan\...`). **"your username" means the username you set up on your PC (the name you sign in with) — do not literally type "your username", unless your username really is "your username"**. **Do not leave the words "your username" in the path, and do not add any brackets** (`( )`, `[ ]`, `{ }`, `< >`).
+> On Windows, the folder named after you inside `C:\Users\` is **the folder that corresponds to your username**. Everywhere below, `your username` refers to it — replace it with your actual username (e.g. `ZhangSan`). **Do not copy the placeholder literally, and do not add any brackets** (`( )` `[ ]` `{ }` `< >`).
 
 ---
 
@@ -116,7 +116,7 @@ portable-agent-project-operating-protocol/
 |----|------|----------|
 | Windows | `C:\Users\your username\.zcode\AGENTS.md` | `AGENTS.md` (no rename) |
 | macOS | `/Users/your username/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
-| Linux | `/home/xiaoming/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
+| Linux | `/home/your username/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
 
 - Create the `.zcode` folder if it doesn't exist.
 - After this, every ZCode session automatically injects the constitution.
@@ -127,7 +127,7 @@ portable-agent-project-operating-protocol/
 |----|------|----------|
 | Windows | `C:\Users\your username\.codex\AGENTS.md` | `AGENTS.md` (no rename) |
 | macOS | `/Users/your username/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
-| Linux | `/home/xiaoming/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
+| Linux | `/home/your username/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
 
 - Tip: Codex also checks for `C:\Users\your username\.codex\AGENTS.override.md` first (only one of the two is used, whichever exists). If you already have an override file, put the constitution content there instead — same effect.
 - Do **not** put the file inside a project-local `.codex` folder — Codex only reads `~/.codex` and the project-root `AGENTS.md`.
@@ -138,7 +138,7 @@ portable-agent-project-operating-protocol/
 |----|------|----------|
 | Windows | `C:\Users\your username\.claude\CLAUDE.md` | **Rename `AGENTS.md` to `CLAUDE.md` first** |
 | macOS | `/Users/your username/.claude/CLAUDE.md` | same |
-| Linux | `/home/xiaoming/.claude/CLAUDE.md` | same |
+| Linux | `/home/your username/.claude/CLAUDE.md` | same |
 
 1. **Rename** `GlobalRules/AGENTS.md` to `CLAUDE.md` (copy it first if you want to keep the original name too).
 2. Put the renamed file into `C:\Users\your username\.claude\` (create the `.claude` folder if missing).
@@ -159,7 +159,7 @@ If you prefer a file (optional — officially documented, but some versions have
 |----|------|----------|
 | Windows | `C:\Users\your username\.cursor\rules\global.mdc` | extension must be `.mdc` |
 | macOS | `/Users/your username/.cursor/rules/global.mdc` | same |
-| Linux | `/home/xiaoming/.cursor/rules/global.mdc` | same |
+| Linux | `/home/your username/.cursor/rules/global.mdc` | same |
 
 > Safest: use Settings → Rules. The file approach is a fallback.
 
@@ -169,7 +169,7 @@ If you prefer a file (optional — officially documented, but some versions have
 |----|------|----------|
 | Windows | `C:\Users\your username\.copilot\instructions\global.instructions.md` | extension must be `.instructions.md` |
 | macOS | `/Users/your username/.copilot/instructions/global.instructions.md` | same |
-| Linux | `/home/xiaoming/.copilot/instructions/global.instructions.md` | same |
+| Linux | `/home/your username/.copilot/instructions/global.instructions.md` | same |
 
 - Create the `.copilot\instructions` folders if missing.
 - For the Copilot CLI, a single-file alternative also works: `C:\Users\your username\.copilot\copilot-instructions.md` (same full content).
@@ -180,7 +180,7 @@ If you prefer a file (optional — officially documented, but some versions have
 |----|------|----------|
 | Windows | `C:\Users\your username\.codeium\windsurf\memories\global_rules.md` | filename is fixed: `global_rules.md` |
 | macOS | `/Users/your username/.codeium/windsurf/memories/global_rules.md` | same |
-| Linux | `/home/xiaoming/.codeium/windsurf/memories/global_rules.md` | same |
+| Linux | `/home/your username/.codeium/windsurf/memories/global_rules.md` | same |
 
 - Paste the **full content** of `GlobalRules/AGENTS.md` into `global_rules.md` (note: this file has a 6,000-character limit — if it doesn't fit, keep the core chapters).
 - You can also edit global rules from the Customizations icon in the top-right of Windsurf's Cascade panel.
