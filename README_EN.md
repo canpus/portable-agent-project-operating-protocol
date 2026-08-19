@@ -91,7 +91,7 @@ portable-agent-project-operating-protocol/
 3. **A project folder** (the folder containing the work you want the AI to help with)
 4. **The ability to create folders and copy-paste files** — that's all
 
-> Don't know what "username" means? On Windows, open File Explorer and go to `C:\Users\` — the folder named after you is your user directory. In every path below, **`your username`** is a placeholder: when copying a path, **replace it with your real username** (e.g. if your folder is `ZhangSan`, write `C:\Users\ZhangSan\...`). **Do not leave the words "your username" in the path, and do not add any brackets** (`( )`, `[ ]`, `{ }`, `< >`).
+> Don't know what "username" means? On Windows, open File Explorer and go to `C:\Users\` — the folder named after you is your user directory. In every path below, **`your username`** is a placeholder: when copying a path, **replace it with your real username** (e.g. if your folder is `ZhangSan`, write `C:\Users\ZhangSan\...`). **"your username" means the username you set up on your PC (the name you sign in with) — do not literally type "your username", unless your username really is "your username"**. **Do not leave the words "your username" in the path, and do not add any brackets** (`( )`, `[ ]`, `{ }`, `< >`).
 
 ---
 
