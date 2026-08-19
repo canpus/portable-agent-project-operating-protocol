@@ -91,7 +91,7 @@ portable-agent-project-operating-protocol/
 3. **A project folder** (the folder containing the work you want the AI to help with)
 4. **The ability to create folders and copy-paste files** — that's all
 
-> Don't know what "username" means? On Windows, open File Explorer and go to `C:\Users\` — the folder named after you (e.g. `Xiaoming`) is your user directory. Throughout this document we **assume your PC username is `Xiaoming`**; replace `Xiaoming` with your own name everywhere.
+> Don't know what "username" means? On Windows, open File Explorer and go to `C:\Users\` — the folder named after you is your user directory. In every path below, **`your username`** is a placeholder: when copying a path, **replace it with your real username** (e.g. if your folder is `ZhangSan`, write `C:\Users\ZhangSan\...`). **Do not leave the words "your username" in the path, and do not add any brackets** (`( )`, `[ ]`, `{ }`, `< >`).
 
 ---
 
@@ -114,8 +114,8 @@ portable-agent-project-operating-protocol/
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.zcode\AGENTS.md` | `AGENTS.md` (no rename) |
-| macOS | `/Users/Xiaoming/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
+| Windows | `C:\Users\your username\.zcode\AGENTS.md` | `AGENTS.md` (no rename) |
+| macOS | `/Users/your username/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
 | Linux | `/home/xiaoming/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
 
 - Create the `.zcode` folder if it doesn't exist.
@@ -125,23 +125,23 @@ portable-agent-project-operating-protocol/
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.codex\AGENTS.md` | `AGENTS.md` (no rename) |
-| macOS | `/Users/Xiaoming/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
+| Windows | `C:\Users\your username\.codex\AGENTS.md` | `AGENTS.md` (no rename) |
+| macOS | `/Users/your username/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
 | Linux | `/home/xiaoming/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
 
-- Tip: Codex also checks for `C:\Users\Xiaoming\.codex\AGENTS.override.md` first (only one of the two is used, whichever exists). If you already have an override file, put the constitution content there instead — same effect.
+- Tip: Codex also checks for `C:\Users\your username\.codex\AGENTS.override.md` first (only one of the two is used, whichever exists). If you already have an override file, put the constitution content there instead — same effect.
 - Do **not** put the file inside a project-local `.codex` folder — Codex only reads `~/.codex` and the project-root `AGENTS.md`.
 
 #### ③ Claude Code
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.claude\CLAUDE.md` | **Rename `AGENTS.md` to `CLAUDE.md` first** |
-| macOS | `/Users/Xiaoming/.claude/CLAUDE.md` | same |
+| Windows | `C:\Users\your username\.claude\CLAUDE.md` | **Rename `AGENTS.md` to `CLAUDE.md` first** |
+| macOS | `/Users/your username/.claude/CLAUDE.md` | same |
 | Linux | `/home/xiaoming/.claude/CLAUDE.md` | same |
 
 1. **Rename** `GlobalRules/AGENTS.md` to `CLAUDE.md` (copy it first if you want to keep the original name too).
-2. Put the renamed file into `C:\Users\Xiaoming\.claude\` (create the `.claude` folder if missing).
+2. Put the renamed file into `C:\Users\your username\.claude\` (create the `.claude` folder if missing).
 3. Claude Code then loads it in every project.
 - Note: Claude Code officially suggests keeping each `CLAUDE.md` under 200 lines for context efficiency. This constitution is ~590 lines; Claude Code loads it **in full** (officially no truncation), it just consumes context. If context is tight, move the core chapters to the global file and the rest to project-level rules (see FAQ "File too long").
 
@@ -157,8 +157,8 @@ If you prefer a file (optional — officially documented, but some versions have
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.cursor\rules\global.mdc` | extension must be `.mdc` |
-| macOS | `/Users/Xiaoming/.cursor/rules/global.mdc` | same |
+| Windows | `C:\Users\your username\.cursor\rules\global.mdc` | extension must be `.mdc` |
+| macOS | `/Users/your username/.cursor/rules/global.mdc` | same |
 | Linux | `/home/xiaoming/.cursor/rules/global.mdc` | same |
 
 > Safest: use Settings → Rules. The file approach is a fallback.
@@ -167,19 +167,19 @@ If you prefer a file (optional — officially documented, but some versions have
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.copilot\instructions\global.instructions.md` | extension must be `.instructions.md` |
-| macOS | `/Users/Xiaoming/.copilot/instructions/global.instructions.md` | same |
+| Windows | `C:\Users\your username\.copilot\instructions\global.instructions.md` | extension must be `.instructions.md` |
+| macOS | `/Users/your username/.copilot/instructions/global.instructions.md` | same |
 | Linux | `/home/xiaoming/.copilot/instructions/global.instructions.md` | same |
 
 - Create the `.copilot\instructions` folders if missing.
-- For the Copilot CLI, a single-file alternative also works: `C:\Users\Xiaoming\.copilot\copilot-instructions.md` (same full content).
+- For the Copilot CLI, a single-file alternative also works: `C:\Users\your username\.copilot\copilot-instructions.md` (same full content).
 
 #### ⑥ Windsurf
 
 | OS | Path | Filename |
 |----|------|----------|
-| Windows | `C:\Users\Xiaoming\.codeium\windsurf\memories\global_rules.md` | filename is fixed: `global_rules.md` |
-| macOS | `/Users/Xiaoming/.codeium/windsurf/memories/global_rules.md` | same |
+| Windows | `C:\Users\your username\.codeium\windsurf\memories\global_rules.md` | filename is fixed: `global_rules.md` |
+| macOS | `/Users/your username/.codeium/windsurf/memories/global_rules.md` | same |
 | Linux | `/home/xiaoming/.codeium/windsurf/memories/global_rules.md` | same |
 
 - Paste the **full content** of `GlobalRules/AGENTS.md` into `global_rules.md` (note: this file has a 6,000-character limit — if it doesn't fit, keep the core chapters).
@@ -189,14 +189,14 @@ If you prefer a file (optional — officially documented, but some versions have
 
 | Tool | Windows path | Filename | Verified |
 |------|--------------|----------|----------|
-| ZCode | `C:\Users\Xiaoming\.zcode\` | `AGENTS.md` | ✅ |
-| Codex CLI | `C:\Users\Xiaoming\.codex\` | `AGENTS.md` | ✅ |
-| Claude Code | `C:\Users\Xiaoming\.claude\` | rename to `CLAUDE.md` | ✅ |
-| Cursor | Settings → Rules (recommended) or `C:\Users\Xiaoming\.cursor\rules\` | `.mdc` | ✅/⚠️ |
-| GitHub Copilot | `C:\Users\Xiaoming\.copilot\instructions\` | `.instructions.md` | ✅ |
-| Windsurf | `C:\Users\Xiaoming\.codeium\windsurf\memories\` | `global_rules.md` | ✅ |
+| ZCode | `C:\Users\your username\.zcode\` | `AGENTS.md` | ✅ |
+| Codex CLI | `C:\Users\your username\.codex\` | `AGENTS.md` | ✅ |
+| Claude Code | `C:\Users\your username\.claude\` | rename to `CLAUDE.md` | ✅ |
+| Cursor | Settings → Rules (recommended) or `C:\Users\your username\.cursor\rules\` | `.mdc` | ✅/⚠️ |
+| GitHub Copilot | `C:\Users\your username\.copilot\instructions\` | `.instructions.md` | ✅ |
+| Windsurf | `C:\Users\your username\.codeium\windsurf\memories\` | `global_rules.md` | ✅ |
 
-On macOS replace `C:\Users\Xiaoming\` with `/Users/Xiaoming/`; on Linux with `/home/xiaoming/`. Everything else stays the same.
+On macOS replace `C:\Users\your username\` with `/Users/your username/`; on Linux with `/home/your username/`. Everything else stays the same.
 
 ---
 
@@ -264,7 +264,7 @@ Seeing this structure means the discipline is active. **`task_current_state.md` 
 
 - ✅ **Working:** it names the locations and key concepts of the rules (e.g. "three ledgers", "plan.md", "state machine", "approve before implementing", "no fabricating facts"), and explains what they do.
 - ❌ **Not working:** it looks blank and says "I received no rules." Then check:
-  1. Is the path right — in particular, **did you actually replace `Xiaoming` with your own username**? Beginners often copy-paste the whole example path and leave `Xiaoming` in it — `C:\Users\Xiaoming\` is only correct if your username really is Xiaoming.
+  1. Is the path right — in particular, **did you replace the placeholder `your username` with your real username**? Beginners often copy-paste the whole path and leave the placeholder in it (or add brackets around it). The path must contain your real username and nothing else — no "your username" text, no brackets.
   2. Is the filename right (`CLAUDE.md` for Claude, `.instructions.md` for Copilot, `.mdc` for Cursor)?
   3. Is it a fresh conversation (old conversations don't reload rules)?
   4. Has the tool been restarted?

@@ -89,7 +89,7 @@ portable-agent-project-operating-protocol/
 3. **一个项目文件夹**（你想让 AI 帮忙干的活所在的文件夹）
 4. **能新建文件/文件夹、能复制粘贴** —— 就这么多
 
-> 看不懂"用户名"是什么意思？以 Windows 为例：打开文件资源管理器，进入 `C:\Users\` 文件夹，里面那个以你的名字命名的文件夹（比如 `Xiaoming`），就是你的用户名目录。下文统一**假设你的电脑用户名是 `Xiaoming`**，所有路径都按这个写，你只要把 `Xiaoming` 换成你自己的名字即可。
+> 不知道"用户名"是什么？以 Windows 为例：打开文件资源管理器，进入 `C:\Users\`，里面那个以你的名字命名的文件夹就是你的用户名目录。下文所有路径里的 **`你的用户名`** 是占位符：复制路径时把它**换成你的真实用户名**（比如你的目录叫 `ZhangSan`，就把 `C:\Users\你的用户名\` 写成 `C:\Users\ZhangSan\`）。**不要把"你的用户名"这四个字原样留在路径里，也不要给它添加任何括号（`( )`、`[ ]`、`{ }`、`< >` 都不行）**。
 
 ---
 
@@ -108,14 +108,14 @@ portable-agent-project-operating-protocol/
 
 ### 5.2 各工具的具体放置位置
 
-> 表格里的路径已经按"用户名 Xiaoming"写全。macOS 和 Linux 的 `~` 就是用户主目录。
+> 表格里的路径已经按"用户名 你的用户名"写全。macOS 和 Linux 的 `~` 就是用户主目录。
 
 #### ① ZCode
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.zcode\AGENTS.md` | `AGENTS.md`（不用改） |
-| macOS | `/Users/Xiaoming/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
+| Windows | `C:\Users\你的用户名\.zcode\AGENTS.md` | `AGENTS.md`（不用改） |
+| macOS | `/Users/你的用户名/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
 | Linux | `/home/xiaoming/.zcode/AGENTS.md` | `AGENTS.md`（不用改） |
 
 - 没有 `.zcode` 文件夹就新建一个。
@@ -125,23 +125,23 @@ portable-agent-project-operating-protocol/
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.codex\AGENTS.md` | `AGENTS.md`（不用改） |
-| macOS | `/Users/Xiaoming/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
+| Windows | `C:\Users\你的用户名\.codex\AGENTS.md` | `AGENTS.md`（不用改） |
+| macOS | `/Users/你的用户名/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
 | Linux | `/home/xiaoming/.codex/AGENTS.md` | `AGENTS.md`（不用改） |
 
-- 小知识：Codex 还会优先读 `C:\Users\Xiaoming\.codex\AGENTS.override.md`（同一层二选一，谁存在读谁）。如果你已经有这个 override 文件，把宪法内容放进 override 文件即可，效果一样。
+- 小知识：Codex 还会优先读 `C:\Users\你的用户名\.codex\AGENTS.override.md`（同一层二选一，谁存在读谁）。如果你已经有这个 override 文件，把宪法内容放进 override 文件即可，效果一样。
 - 注意：**不要**把文件放进项目内部的 `.codex` 文件夹——官方只认用户目录 `~/.codex` 和项目根目录的 `AGENTS.md`。
 
 #### ③ Claude Code
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.claude\CLAUDE.md` | **先把 `AGENTS.md` 重命名为 `CLAUDE.md`** |
-| macOS | `/Users/Xiaoming/.claude/CLAUDE.md` | 同上 |
+| Windows | `C:\Users\你的用户名\.claude\CLAUDE.md` | **先把 `AGENTS.md` 重命名为 `CLAUDE.md`** |
+| macOS | `/Users/你的用户名/.claude/CLAUDE.md` | 同上 |
 | Linux | `/home/xiaoming/.claude/CLAUDE.md` | 同上 |
 
 - 第一步：把 `GlobalRules/AGENTS.md` **重命名**为 `CLAUDE.md`（复制一份再改名，原文件保留也没关系）。
-- 第二步：把改好名的文件放进 `C:\Users\Xiaoming\.claude\`（没有 `.claude` 文件夹就新建）。
+- 第二步：把改好名的文件放进 `C:\Users\你的用户名\.claude\`（没有 `.claude` 文件夹就新建）。
 - 放好后，Claude Code 在**每个项目**里开会话时都会自动加载它。
 - 提醒：Claude Code 官方建议每个 `CLAUDE.md` 控制在 200 行以内（加载效率友好）。这份宪法约 590 行，Claude Code 会**完整加载**（官方明确不会截断），只是会占一些上下文；如果你觉得上下文吃紧，可以只把宪法的核心章节放进全局，把其余内容作为项目级规则——见 FAQ「文件太长怎么办」。
 
@@ -157,8 +157,8 @@ portable-agent-project-operating-protocol/
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.cursor\rules\global.mdc` | 内容粘贴进去，扩展名必须是 `.mdc` |
-| macOS | `/Users/Xiaoming/.cursor/rules/global.mdc` | 同上 |
+| Windows | `C:\Users\你的用户名\.cursor\rules\global.mdc` | 内容粘贴进去，扩展名必须是 `.mdc` |
+| macOS | `/Users/你的用户名/.cursor/rules/global.mdc` | 同上 |
 | Linux | `/home/xiaoming/.cursor/rules/global.mdc` | 同上 |
 
 > 稳妥做法：优先用"设置 → Rules"粘贴，文件方式作为备选。
@@ -167,19 +167,19 @@ portable-agent-project-operating-protocol/
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.copilot\instructions\global.instructions.md` | 扩展名必须是 `.instructions.md` |
-| macOS | `/Users/Xiaoming/.copilot/instructions/global.instructions.md` | 同上 |
+| Windows | `C:\Users\你的用户名\.copilot\instructions\global.instructions.md` | 扩展名必须是 `.instructions.md` |
+| macOS | `/Users/你的用户名/.copilot/instructions/global.instructions.md` | 同上 |
 | Linux | `/home/xiaoming/.copilot/instructions/global.instructions.md` | 同上 |
 
 - 没有 `.copilot\instructions` 文件夹就逐级新建。
-- 如果你用的是 Copilot 命令行版（copilot CLI），还可以用单文件方式：`C:\Users\Xiaoming\.copilot\copilot-instructions.md`（内容同样整份粘贴）。
+- 如果你用的是 Copilot 命令行版（copilot CLI），还可以用单文件方式：`C:\Users\你的用户名\.copilot\copilot-instructions.md`（内容同样整份粘贴）。
 
 #### ⑥ Windsurf
 
 | 系统 | 放置路径 | 文件名 |
 |------|----------|--------|
-| Windows | `C:\Users\Xiaoming\.codeium\windsurf\memories\global_rules.md` | 文件名固定为 `global_rules.md` |
-| macOS | `/Users/Xiaoming/.codeium/windsurf/memories/global_rules.md` | 同上 |
+| Windows | `C:\Users\你的用户名\.codeium\windsurf\memories\global_rules.md` | 文件名固定为 `global_rules.md` |
+| macOS | `/Users/你的用户名/.codeium/windsurf/memories/global_rules.md` | 同上 |
 | Linux | `/home/xiaoming/.codeium/windsurf/memories/global_rules.md` | 同上 |
 
 - 把 `GlobalRules/AGENTS.md` 的内容**整份粘贴替换**进 `global_rules.md`（注意：该文件有 6000 字符上限，如果内容放不下，可以只保留宪法的核心章节）。
@@ -189,14 +189,14 @@ portable-agent-project-operating-protocol/
 
 | 工具 | Windows 放置路径 | 文件名要求 | 核验 |
 |------|------------------|-----------|------|
-| ZCode | `C:\Users\Xiaoming\.zcode\` | `AGENTS.md` | ✅ |
-| Codex CLI | `C:\Users\Xiaoming\.codex\` | `AGENTS.md` | ✅ |
-| Claude Code | `C:\Users\Xiaoming\.claude\` | 改名 `CLAUDE.md` | ✅ |
-| Cursor | 设置 → Rules 粘贴（推荐）或 `C:\Users\Xiaoming\.cursor\rules\` | `.mdc` | ✅/⚠️ |
-| GitHub Copilot | `C:\Users\Xiaoming\.copilot\instructions\` | `.instructions.md` | ✅ |
-| Windsurf | `C:\Users\Xiaoming\.codeium\windsurf\memories\` | `global_rules.md` | ✅ |
+| ZCode | `C:\Users\你的用户名\.zcode\` | `AGENTS.md` | ✅ |
+| Codex CLI | `C:\Users\你的用户名\.codex\` | `AGENTS.md` | ✅ |
+| Claude Code | `C:\Users\你的用户名\.claude\` | 改名 `CLAUDE.md` | ✅ |
+| Cursor | 设置 → Rules 粘贴（推荐）或 `C:\Users\你的用户名\.cursor\rules\` | `.mdc` | ✅/⚠️ |
+| GitHub Copilot | `C:\Users\你的用户名\.copilot\instructions\` | `.instructions.md` | ✅ |
+| Windsurf | `C:\Users\你的用户名\.codeium\windsurf\memories\` | `global_rules.md` | ✅ |
 
-macOS 把 `C:\Users\Xiaoming\` 换成 `/Users/Xiaoming/`，Linux 换成 `/home/xiaoming/`，其余相同。
+macOS 把 `C:\Users\你的用户名\` 换成 `/Users/你的用户名/`，Linux 换成 `/home/你的用户名/`，其余相同。
 
 ---
 
@@ -264,7 +264,7 @@ AI 按规则开始第一次任务时，会自动：
 
 - ✅ **装好了**：它能说出你放的位置、规则里的关键概念（比如"三本账"、"plan.md"、"状态机"、"先批准再施工"、"不捏造事实"等），并且能准确说出这些规则的作用。
 - ❌ **没生效**：它一脸茫然，说"我没有收到任何规则"。此时检查：
-  1. 路径对不对（特别注意：**用户名是不是忘了从 `Xiaoming` 改成你自己的**？新手最容易整段复制粘贴，把示例里的 `Xiaoming` 原样带进路径——`C:\Users\Xiaoming\` 只有在你真的叫 Xiaoming 时才是对的）？
+  1. 路径对不对（特别注意：**占位符 `你的用户名` 是不是忘了换成你的真实用户名**？新手最容易整段复制粘贴，把占位符原样带进路径，还顺手给它加上括号——路径里只允许出现你的真实用户名：不能保留"你的用户名"这四个字，也不能出现任何括号）？
   2. 文件名对不对（Claude 要 `CLAUDE.md`、Copilot 要 `.instructions.md`、Cursor 要 `.mdc`）？
   3. 是不是新开的对话（旧对话不会重新加载规则）？
   4. 工具是否重启过？
