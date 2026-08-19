@@ -1,11 +1,12 @@
-# TASK_STATE_MACHINE.md — 通用 Agent Task 生命周期状态机
+# TASK_STATE_MACHINE.md — 通用 Agent Task 生命周期状态机（机制层）
 
 **适用范围**：与同目录 `AGENTS.md` 配套使用。  
 **状态机版本**：`TSM-2`  
 **配套数据契约**：`SCHEMA.md`  
+**配套触发纪律**：`OPERATING_RULES.md`（条件触发细节；入口见 `AGENTS.md` §5 触发索引表）  
 **适用对象**：每个 Top-Level Session 对应的唯一 Task。
 
-本文件只定义**状态、进入条件、退出条件、写入时机和用户门控**。具体字段、ID 与记录模板统一由 `SCHEMA.md` 定义。
+本文件只定义**机制**：状态、进入条件、退出条件、写入时机和用户门控。纪律性条款（该不该做、往哪走）在 `AGENTS.md`；条件触发的执行细节在 `OPERATING_RULES.md`；具体字段、ID 与记录模板统一由 `SCHEMA.md` 定义。
 
 ---
 
@@ -13,6 +14,7 @@
 
 ### I1. Top-Level Session = Task
 一个 Top-Level Session 只有一个 Task；Task 内可以有多个 Round。
+**例外（续接）**：用户首句提及已有任务并双次确认继续时，该会话**不建立新任务**，直接续接旧任务（判定与协议见 `OPERATING_RULES.md` §2；本状态机的 S0 仅适用于"新建任务"路径）。
 
 ### I2. Plan 是施工授权边界
 没有用户明确批准的精确 Plan Revision，不得进行实质施工。只读调查与不会改变业务/项目/外部状态的低风险验证可以在 Plan 批准前进行。
@@ -24,7 +26,7 @@
 `task_history.md` 只追加不回写。每个 History Entry 的 Snapshot Body 必须完整转写当时的 `task_current_state.md`。
 
 ### I5. Case 只由用户显式触发
-状态机不得因错误、返工或关闭任务自动创建 Case。
+Case Review 是用户触发的旁路流程（纪律与触发约束见 `AGENTS.md` §3.5；本状态机仅提供旁路机制，见 §13）。
 
 ### I6. 用户批准不能由模型推定
 沉默、换话题、继续提供信息、仅确认需求理解，都不等于批准 Plan。
@@ -83,9 +85,10 @@ ANY_STATE --用户显式要求复盘/记录 Case--> CASE_REVIEW --> 返回原状
 ## 2. S0 — TASK_ONBOARDING
 
 ### 进入条件
-当前 Top-Level Session 首次进入实际项目任务，且尚无 Task 根目录。
+当前 Top-Level Session 首次进入实际项目任务，且**会话归属判定为"新建任务"**（归属判定见 `AGENTS.md` §1 与 `OPERATING_RULES.md` §2；判定为"续接"时不进入本状态）。
 
 ### 必须动作
+0. 读取 `<PROJECT_ROOT>/TASK_INDEX.md`（若存在），确认项目内已有任务全景，避免编号冲突；按 `SCHEMA.md` TIDX-1 在任务创建时写入初始区块。
 1. 按 `AGENTS.md` 确定 `PROJECT_ROOT`、`TASKS_ROOT` 与 Project Baseline 边界。
 2. 创建当前唯一 Task 目录、六大子目录和 `05_docs/cases/`。
 3. 初始化：
@@ -259,6 +262,7 @@ ANY_STATE --用户显式要求复盘/记录 Case--> CASE_REVIEW --> 返回原状
 
 动作顺序固定：
 
+0. **文件归属结算**（`OPERATING_RULES.md` §5.3）：列出未定归属文件，用户裁决，结果写入 FILE_INDEX.md——在冻结 CurrentState 之前完成。
 1. **冻结当前 CurrentState 内容。**
 2. 按 `SCHEMA.md` 创建 History Entry Envelope，`REASON: USER_ACCEPTED_DELIVERY`。
 3. 将冻结的 `task_current_state.md` **完整原文**写入 History Snapshot Body。
@@ -356,6 +360,8 @@ ANY_STATE --用户显式要求复盘/记录 Case--> CASE_REVIEW --> 返回原状
 - 当前 Round 被新的获批 Revision/方向正式替代。
 
 ### 关闭原则
+- 关闭前按 `OPERATING_RULES.md` §5.3 完成文件归属结算（先结算，后快照）。
+- 按 `OPERATING_RULES.md` §3 更新 `TASK_INDEX.md` 中本任务区块（状态、阶段、交接要点、LAST_ACTIVE_AT）。
 - 有实际施工/交付状态时，关闭前必须确保最后一个应保存的 CurrentState 已进入 History。
 - History 只接受 CurrentState 完整快照，不另写替代性“总结历史”。
 - `plan.md` 如需 Round Close Event，必须 append。
@@ -388,7 +394,7 @@ Task 仍存在，但当前没有进行中的工作项。
 ## 13. CASE_REVIEW — 用户显式触发的复盘旁路
 
 ### 触发条件
-只有用户显式要求复盘、记录 Case 或沉淀经验。
+只有用户显式要求复盘、记录 Case 或沉淀经验（触发约束见 `AGENTS.md` §3.5）。
 
 ### 动作
 1. 记录进入 Case Review 前的原状态。
@@ -435,6 +441,8 @@ Task 仍存在，但当前没有进行中的工作项。
    - 局部读取必要 Snapshot。
 8. 不得默认全量读取长期账本。
 9. 恢复后从 `SAFE_RESUME_POINT` 继续，禁止重复生成已存在的 Proposal / History Entry / 正式 ID。
+
+> 本节适用于**任务内**恢复（同一任务的对话/压缩/子代理场景）。**跨任务场景**（新会话续接旧任务）不适用本节——归属判定与续接协议见 `OPERATING_RULES.md` §2，索引读取见 `AGENTS.md` §1。
 
 ---
 

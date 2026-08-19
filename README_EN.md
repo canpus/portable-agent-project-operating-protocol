@@ -37,8 +37,8 @@ It is **two sets of rule files + a self-running bookkeeping system**:
 | Part | What it is | Analogy |
 |------|-----------|---------|
 | `GlobalRules/AGENTS.md` | **Global Constitution**: ground rules your AI must follow in *every* project (no lying, no inventing facts, protect your files, don't touch system settings…) | "Family rules" at home |
-| `ProjectRules/` (3 files) | **Project Discipline**: workflow rules that apply inside *one specific project* (write a plan before working, keep state, keep history…) | "Class rules" for one class |
-| Self-running bookkeeping | The AI automatically creates a `_agent_tasks/` directory in your project and keeps three ledgers: plan, current state, and history snapshots | The class "duty log" |
+| `ProjectRules/` (4 files) | **Project Discipline**: workflow rules that apply inside *one specific project* (write a plan before working, keep state, keep history…) | "Class rules" for one class |
+| Self-running bookkeeping | The AI automatically creates a `tasks/` directory, a project task index (`TASK_INDEX.md`) and a file registry (`FILE_INDEX.md`) in your project, and keeps three ledgers: plan, current state, and history snapshots | The class "duty log" |
 
 You put the rule files where your AI tool looks for them → the AI reads them at the start of every session → it keeps the ledgers while working → at any moment, opening the "current state" file tells you exactly where things stand.
 
@@ -71,9 +71,10 @@ portable-agent-project-operating-protocol/
 ├── GlobalRules/
 │   └── AGENTS.md                    ← Global Constitution (works across projects, machines, tools)
 └── ProjectRules/
-    ├── AGENTS.md                    ← Project Discipline (the workflow master)
-    ├── TASK_STATE_MACHINE.md        ← State machine (when you can do what, when you must wait for approval)
-    └── SCHEMA.md                    ← Data contract (how ledgers are written, how IDs work)
+    ├── AGENTS.md                    ← Project Discipline · Constitution layer (what to do, which way to go; injected every session)
+    ├── OPERATING_RULES.md           ← Project Discipline · Triggered rules layer (condition-triggered: exactly how)
+    ├── TASK_STATE_MACHINE.md        ← Mechanism layer (state machine: when you can do what, when you must wait for approval)
+    └── SCHEMA.md                    ← Contract layer (how ledgers are written, how IDs work)
 ```
 
 - `GlobalRules/AGENTS.md` — **install once, applies to all projects.** It's the "behavior constitution": no hallucination, protect your existing files, no unauthorized data sharing, no touching system settings…
@@ -205,11 +206,12 @@ On macOS replace `C:\Users\Xiaoming\` with `/Users/Xiaoming/`; on Linux with `/h
 
 ### 6.1 Steps
 
-1. Copy **all 3 files** from `ProjectRules/` into your project root:
+1. Copy **all 4 files** from `ProjectRules/` into your project root:
    - `AGENTS.md`
+   - `OPERATING_RULES.md`
    - `TASK_STATE_MACHINE.md`
    - `SCHEMA.md`
-2. **All three files must sit in the same folder, next to each other** (`AGENTS.md` references the other two by relative filename — separated files won't be found).
+2. **All four files must sit in the same folder, next to each other** (`AGENTS.md` references the other three by relative filename — separated files won't be found).
 3. If your project root already has an `AGENTS.md` (e.g. team rules), don't overwrite it — merge the contents, or put the `ProjectRules` trio in a subfolder and add a one-line reference from the existing `AGENTS.md` (see FAQ "My project already has an AGENTS.md").
 4. How each tool reads project-level rules (filenames differ from the global level):
 
@@ -219,7 +221,7 @@ On macOS replace `C:\Users\Xiaoming\` with `/Users/Xiaoming/`; on Linux with `/h
 | Claude Code | `CLAUDE.md` at the project root is auto-read — **copy `AGENTS.md` and rename it `CLAUDE.md`** in the project root (keeping `AGENTS.md` too is fine) |
 | Windsurf | root `AGENTS.md` is always active; content can also go into `.windsurf/rules/*.md` |
 
-5. **You create nothing manually** — the first time the AI works in the project, it automatically creates the `_agent_tasks/` directory and the three ledgers, as the rules require. You only need to have placed the files correctly.
+5. **You create nothing manually** — the first time the AI works in the project, it automatically creates the `tasks/` directory and the three ledgers, plus `TASK_INDEX.md` (project task index) and `FILE_INDEX.md` (file registry) in the project root, as the rules require. You only need to have placed the files correctly.
 
 ### 6.2 What you'll see on the first task
 
@@ -228,9 +230,12 @@ The AI will automatically create:
 ```text
 your-project/
 ├── AGENTS.md                        ← placed by you
+├── OPERATING_RULES.md               ← placed by you
 ├── TASK_STATE_MACHINE.md            ← placed by you
 ├── SCHEMA.md                        ← placed by you
-└── _agent_tasks/                    ← created automatically
+├── TASK_INDEX.md                    ← created automatically (project task index)
+├── FILE_INDEX.md                    ← created automatically (file registry)
+└── tasks/                           ← created automatically
     └── 20260819/
         └── task1_XXX/
             ├── 01_inputs/           ← input materials
@@ -264,11 +269,11 @@ Seeing this structure means the discipline is active. **`task_current_state.md` 
   3. Is it a fresh conversation (old conversations don't reload rules)?
   4. Has the tool been restarted?
 
-**One more test** (proves memory survival): give the AI a task, let it create `_agent_tasks/` and do a couple of steps, then **close the conversation, open a new one**, and ask:
+**One more test** (proves memory survival across conversations): give the AI a task, let it create `tasks/` and do a couple of steps, then **close the conversation, open a new one**, and ask as your first sentence:
 
 > "What were we working on in the previous conversation? Where are we now?"
 
-It should open `task_current_state.md` and accurately answer the task ID, current phase, and next step. That's "no memory loss across conversations", demonstrated live.
+It first reads `TASK_INDEX.md` (the project task index), recognizes which task your "previous conversation" refers to, and **asks whether you want to continue that task** — after you confirm, it opens that task's `task_current_state.md` and accurately answers the task ID, current phase, and next step. That's "no memory loss across conversations", demonstrated live.
 
 ---
 
@@ -300,10 +305,15 @@ Three key gates:
 
 ### 8.3 Recovery after a new conversation / new machine
 
-1. The AI in a new conversation first reads `05_docs/task_current_state.md`
-2. From it: task ID, current phase, progress, approved plan reference
-3. For details, it searches `plan.md` / `task_history.md` by ID and reads only the relevant blocks
-4. It resumes from the "safe resume point"
+**New conversation (same project):**
+
+1. The AI first reads `TASK_INDEX.md` in the project root (the panorama: which tasks exist, where each one stands)
+2. If you mention an old task, the AI asks whether to continue it; after your confirmation (double confirmation) it **continues that task** (no new task is created — the task count never changes)
+3. It opens that task's `05_docs/task_current_state.md` and gets the task ID, phase, progress, and approved plan reference
+4. For details, it searches `plan.md` / `task_history.md` by ID and reads only the relevant blocks
+5. It resumes from the "safe resume point"; if a parallel session is suspected, the AI warns you proactively and verifies
+
+**New machine:** copy the whole project folder — `tasks/`, `TASK_INDEX.md`, `FILE_INDEX.md` and the four rule files are all part of the memory. The AI on the new machine reads the index and continues or starts tasks exactly the same way.
 
 The same mechanism handles context compression: compression may lose the model's memory, but not the ledgers on disk.
 
@@ -333,13 +343,13 @@ Project level: one `AGENTS.md` in the project root works for both; for Claude Co
 Claude Code officially loads `CLAUDE.md` in full, no truncation; but it recommends under 200 lines per file to save context. If tight, keep only the core chapters (honesty, asset protection, data boundaries) in the global `CLAUDE.md` and move the rest to project-level rules.
 
 **Q5: My project already has an AGENTS.md. Conflict?**
-No conflict, but don't overwrite existing rules. Recommended: put the `ProjectRules` trio in a subfolder (e.g. `docs/agent-rules/`), then add one line at the end of the existing `AGENTS.md`: "See also the rules in `docs/agent-rules/`, which have equal effect." Most tools read rule files at any depth within a project.
+No conflict, but don't overwrite existing rules. Recommended: put the `ProjectRules` quartet in a subfolder (e.g. `docs/agent-rules/`), then add one line at the end of the existing `AGENTS.md`: "See also the rules in `docs/agent-rules/`, which have equal effect." Most tools read rule files at any depth within a project.
 
 **Q6: The default timezone is Asia/Shanghai. Can I change it?**
 Yes. Open the project-root `AGENTS.md`, find line 6 "默认项目时区：Asia/Shanghai", and change it to your timezone. Takes effect in a new conversation.
 
 **Q7: What about switching computers?**
-Global constitution: re-place it per section 5.2 on the new machine. Project memory: copy the whole project folder (including `_agent_tasks/`) — the ledgers *are* the memory. On the new machine, the AI reads `task_current_state.md` and takes over seamlessly.
+Global constitution: re-place it per section 5.2 on the new machine. Project memory: copy the whole project folder (including `tasks/`, `TASK_INDEX.md`, `FILE_INDEX.md`) — the ledgers *are* the memory. On the new machine, the AI reads `TASK_INDEX.md` and `task_current_state.md` and continues seamlessly.
 
 **Q8: If I update the rule files, do old ledgers break?**
 No. Ledgers are append-only; rule files are editable; the two don't interfere. Changing rules affects future work only; history stays intact.

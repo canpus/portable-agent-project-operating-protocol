@@ -1,11 +1,12 @@
 # SCHEMA.md — 通用 Agent 项目生命周期数据契约
 
-**适用范围**：与同目录 `AGENTS.md` / `TASK_STATE_MACHINE.md` 配套使用。  
+**适用范围**：与同目录 `AGENTS.md` / `OPERATING_RULES.md` / `TASK_STATE_MACHINE.md` 配套使用。  
 **Schema 版本**：`PKS-2`  
-**Sub-schemas**：`PLAN-2`, `CS-2`, `HSNAP-1`, `CASE-1`
+**Sub-schemas**：`PLAN-2`, `CS-2`, `HSNAP-1`, `CASE-1`, `TIDX-1`, `FIDX-1`
 
 **定位**：本文件只规定生命周期数据“怎么写”：字段、ID、记录块、证据、引用和模板。  
 “什么时候写、什么时候等待用户、何时进入下一状态”由 `TASK_STATE_MACHINE.md` 定义。  
+“该不该做、往哪走”由 `AGENTS.md` 定义；条件触发细节由 `OPERATING_RULES.md` 定义。  
 项目目录和资产纪律由 `AGENTS.md` 定义。
 
 > 本契约不依赖特定模型、Agent 宿主、IDE、CLI、编程语言或版本控制系统。
@@ -464,6 +465,7 @@ PROJECT_AND_TASK_IDENTITY:
 
 ACTIVE_ROUND_AND_PLAN:
   ROUND_ID:
+  PRECEDING_TASK_REF:  # 续接来源（新建任务为 none；续接时记录来源任务编号与时间，见 OPERATING_RULES §2）
   ACTIVE_PLAN_REF:
   PLAN_LIFECYCLE_STATUS: PLANNING / AWAITING_APPROVAL / REJECTED / APPROVED / CLOSED / none
   APPROVAL_REF:
@@ -754,3 +756,73 @@ UNVERIFIED
 - [ ] Case 是否确由用户显式触发；
 - [ ] Subagent 是否未独立分配正式 ID；
 - [ ] canonical project files 与 Task-local assets 是否正确区分。
+
+---
+
+# 11. `TASK_INDEX.md` — TIDX-1（项目任务全景索引）
+
+## 11.1 定位
+
+`<PROJECT_ROOT>/TASK_INDEX.md` 是**投影式**（可覆盖）的项目任务全景索引：项目内所有任务 current_state 的简略版，任何时刻反映各任务的当前状态。
+
+- 不承担不可变历史职责（历史在 `task_history.md`）。
+- 回答：“项目里有哪些任务、各做到哪、要找细节去哪个路径”。
+- 任何新对话的第一步读取它（`AGENTS.md` §1）。
+
+## 11.2 维护规则
+
+- 每任务一个区块，区块相互独立；更新前读全文件，**只替换自己的区块**。
+- 写入时机：任务创建时写初始区块；轮次结束时更新自己的区块；续接接管时更新 `LAST_ACTIVE_AT`。
+- 维护权：归属于该任务的**最后活跃 Agent**；同一任务内禁止并行更改。
+- 任务目录被删除/归档后，区块标记 `STALE` 而非删除。
+- 触发细节见 `OPERATING_RULES.md` §3。
+
+## 11.3 区块模板
+
+```text
+### task<N>_<Description>
+
+TASK_ID: task<N>_<Description>
+CREATED_AT: <RFC3339>
+STATUS: ACTIVE / CLOSED / STALE
+SUBJECT: <一句话主题>
+ROUND_ID: <最近轮次，如 R0002>
+WORKFLOW_PHASE: <最近阶段，如 IMPLEMENTATION / IDLE>
+HANDOFF_NOTES: <交接要点 1-2 行：做了什么、结论、坑>
+CURRENT_STATE_PATH: tasks/<YYYYMMDD>/task<N>_<Description>/05_docs/task_current_state.md
+LAST_ACTIVE_AT: <RFC3339>
+```
+
+规则：`HANDOFF_NOTES` 只写结论与指针，不重述细节；细节永远回 `CURRENT_STATE_PATH` 取。
+
+---
+
+# 12. `FILE_INDEX.md` — FIDX-1（文件归属登记流水）
+
+## 12.1 定位
+
+`<PROJECT_ROOT>/FILE_INDEX.md` 是 **append-only** 的文件归属登记流水：记录散落文件的归属判定与用户裁决，与 TASK_INDEX 的投影职责分开。
+
+- 回答：“这个文件是哪来的、归谁、状态如何”。
+- 登记范围：项目根目录散落文件 + 各任务 `01_inputs/` 内容。
+
+## 12.2 快速判定与结算
+
+- 快速判定三规则（用户澄清 > 会话中提及 > 会话前已有=待定）见 `OPERATING_RULES.md` §5。
+- 轮次关闭时执行归属结算（先结算、后写历史快照）见 `OPERATING_RULES.md` §5.3。
+
+## 12.3 条目模板
+
+```text
+### FILE-<NNNN>  <相对路径或文件名>
+
+RECORDED_AT: <RFC3339>
+FILE_TIME: <文件时间，UNKNOWN 则标注>
+SUMMARY: <内容概要，一句话>
+ATTRIBUTION: task<N> / 公共 / 待定
+EVIDENCE: <判定依据：USER_CLARIFICATION / USER_MENTION / PRE_SESSION / OTHER>
+STATUS: PENDING_USER / CONFIRMED / CLEANED / ARCHIVED
+USER_DECISION: <用户裁决原文或摘要；未裁决为 none>
+```
+
+规则：`ATTRIBUTION: 待定` 的条目保持到用户裁决后才改写状态（追加新记录说明裁决，不回写旧条目）。
