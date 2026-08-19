@@ -264,7 +264,7 @@ Seeing this structure means the discipline is active. **`task_current_state.md` 
 
 - ✅ **Working:** it names the locations and key concepts of the rules (e.g. "three ledgers", "plan.md", "state machine", "approve before implementing", "no fabricating facts"), and explains what they do.
 - ❌ **Not working:** it looks blank and says "I received no rules." Then check:
-  1. Is the path right (is the username spelled correctly)?
+  1. Is the path right — in particular, **did you actually replace `Xiaoming` with your own username**? Beginners often copy-paste the whole example path and leave `Xiaoming` in it — `C:\Users\Xiaoming\` is only correct if your username really is Xiaoming.
   2. Is the filename right (`CLAUDE.md` for Claude, `.instructions.md` for Copilot, `.mdc` for Cursor)?
   3. Is it a fresh conversation (old conversations don't reload rules)?
   4. Has the tool been restarted?
