@@ -42,7 +42,7 @@ It is **two sets of rule files + a self-running bookkeeping system**:
 
 You put the rule files where your AI tool looks for them → the AI reads them at the start of every session → it keeps the ledgers while working → at any moment, opening the "current state" file tells you exactly where things stand.
 
-> This repository itself is a project managed by these very rules — the `_agent_tasks/` directory here is the real ledger left behind by running this discipline.
+> This repository itself was produced using these very rules: plans were written and approved before any work, the README was reviewed before release, and every step kept evidence. The process ledgers live in the author's local workspace (`_agent_tasks/`) and are not published here — once you deploy these rules, your own project will grow the same kind of ledgers.
 
 ---
 
