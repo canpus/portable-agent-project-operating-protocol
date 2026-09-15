@@ -1,226 +1,96 @@
-# AGENTS.md — 项目级 Agent 工作纪律（宪法层）
+# AGENTS.md — 项目执行与状态入口
 
-**适用范围**：本文件所在目录及其项目树。  
-**PROJECT_ROOT**：本 `AGENTS.md` 所在目录。  
-**默认 TASKS_ROOT**：`<PROJECT_ROOT>/tasks/`。  
-**默认项目时区**：`Asia/Shanghai`（UTC+8）；若项目已有明确时区约定，以项目约定为准。  
-**定位**：本文件是**宪法层**：只定义永久约束、风险时刻条款与流程开关。具体执行细节一律在 `OPERATING_RULES.md`（触发纪律层）；状态流转在 `TASK_STATE_MACHINE.md`（机制层）；记录格式在 `SCHEMA.md`（契约层）。
+## 0. 入口、路径与配置
 
-> 本规则不假定特定模型、厂商、IDE、CLI、工具名称或上下文长度。实际宿主的系统规则、安全策略、权限边界与真实工具能力始终优先；不得假装不存在的能力可用。
+- 本文件适用于其所在目录及子目录；`PROJECT_ROOT` 即本文件所在目录。
+- 本文件是项目规则的唯一入口。详细规则位于 `.agent-protocol/rules/`，记录契约位于 `.agent-protocol/SCHEMA.md`，模板位于 `.agent-protocol/templates/`。
+- 项目状态写入 `<PROJECT_ROOT>/.agent-work/`；源码、原始输入和正式交付物继续保留在项目原有位置，不搬进状态目录。
+- `RECORD_MODE: AUTO`。如希望所有有实际操作的任务都记录，可改为 `TRACKED`；纯问答仍不建账。
+- 第一次加载本文件时，只执行本节和下面的“会话入口”。不要预先读取全部详细规则、Schema、历史或旧计划。
 
----
+## 1. 会话入口：每次开始或恢复都按此判断
 
-## 0. 权威文件与职责分工
+1. 先理解用户当前请求，不因打开新会话就自动创建新任务。
+2. 用户明确提出独立的新目标，按“记录模式判定”决定 FAST 或 TRACKED。
+3. 用户说“继续、恢复、压缩后继续”，或提供已有状态路径时，读取 `.agent-protocol/rules/recovery.md`，不要新建任务或重复已完成步骤。
+4. 用户要求“准备压缩、先落盘、保存进度”时，读取 `.agent-protocol/rules/checkpoint.md`；保存并核验后停止启动新工作，等待用户压缩或继续指令。
+5. 若 `.agent-work/active.md` 存在但用户明确提出无关的新任务，不自动续接旧任务；旧任务记录保留。
+6. 只有当前请求与多个旧任务都可能匹配，或发现同一任务存在写入冲突时，才询问用户选择。用户已给出明确任务 ID 或状态路径时不再确认。
 
-项目根目录长期有效的四份规范：
+## 2. 记录模式判定
 
-1. **`AGENTS.md`**（本文件）
-   - 定义：宪法层——永久约束、风险时刻条款、流程开关（该不该做、往哪走）。
-2. **`OPERATING_RULES.md`**
-   - 定义：触发纪律层——条件触发的执行细节（WHEN 什么情况 THEN 怎么做）。
-3. **`TASK_STATE_MACHINE.md`**
-   - 定义：机制层——状态、进入/退出条件、用户门控、上下文恢复协议。
-4. **`SCHEMA.md`**
-   - 定义：契约层——plan.md、task_current_state.md、task_history.md、cases/、TASK_INDEX.md、FILE_INDEX.md 的字段、ID、格式、证据和交叉引用。
+### FAST：不创建任务账本
 
-**职责判定：**
-- “该不该做、往哪个流程走” → 本文件（含 §5 触发索引表）
-- “具体怎么做（条件触发）” → `OPERATING_RULES.md`
-- “什么时候写 / 什么时候必须等待用户 / 什么时候允许进入下一阶段” → `TASK_STATE_MACHINE.md`
-- “写哪些字段 / ID 怎么分配 / 记录长什么样” → `SCHEMA.md`
-- “文件放哪里 / 哪些不能动 / 谁负责治理” → 本文件 §2、§4
+仅当以下条件全部成立时使用 FAST：
 
-四者直接冲突时，不得自行选择更方便的一方；停止冲突步骤并向用户说明。用户当前明确指令可以改变当前 Task 的后续要求，但不得回写或篡改已经形成的 Append-Only 记录。
+- 当前任务不需要正式多步骤计划；
+- 预计可在当前连续工作中完成；
+- 没有需要等待的后台任务、外部结果或用户决定；
+- 没有必须跨压缩/会话保留的中间成果或复杂决策；
+- 用户没有要求记录、交接、稍后继续或准备压缩。
 
-### 0.1 权威文件必须按需实际读取
+FAST 仍必须遵守全局规则、项目已有约束及相关动作规则。简单改动可以直接完成并验证，不为形式建账。
 
-不得只凭模型记忆声称“遵循了”指针文件：
+### TRACKED：创建并维护项目记录
 
-- 首次创建 Task 或即将发生生命周期状态转换时，如果对应规则不在当前上下文，先按状态名/标题定位并读取 `TASK_STATE_MACHINE.md` 的相关章节。
-- 即将写入任何账本或登记文件时，如果对应契约不在当前上下文，先按子 Schema 名、字段名或标题定位并读取 `SCHEMA.md` 的相关章节。
-- 执行条件触发动作前，按 §5 触发索引表定位并读取 `OPERATING_RULES.md` 的相关章节。
-- 读取规则文件属于必要验证，不得以“模型大概记得”为由跳过。
+出现以下任一可观察条件就使用或升级为 TRACKED：
 
----
+- 准备建立包含两个或以上里程碑的正式计划；
+- 已产生后续步骤依赖的中间成果、调查结论或用户决定；
+- 任务需要等待、交接、跨会话或压缩后继续；
+- 存在结果可能不确定、恢复后不能盲目重试的外部动作；
+- 用户明确要求计划落盘、保存状态、记录历史或使用 TRACKED。
 
-## 1. 顶层会话与任务（流程开关）
+TRACKED 一旦启用，在任务完成或取消前不降回 FAST。FAST 任务中途满足条件时立即升级，只记录当前已知事实，不补造此前历史。
 
-本规则中的 **Top-Level Session** 指由用户直接发起、承载当前项目工作的顶层 Agent 会话/执行上下文。不同宿主可称为 conversation、chat、session、thread、run 等。
+## 3. TRACKED 的强制生命周期
 
-**核心判定（流程开关，任何对话的第一步）**：
+1. 新建或续接任务、创建/修订正式计划、结束任务：读取 `.agent-protocol/rules/lifecycle.md`。
+2. 正式计划修订写入 `plan.md` 后，立即按 checkpoint.md 保存 `PLAN_CREATED` 或 `PLAN_REVISED` 检查点。
+3. 计划中一个步骤达到其验收条件后，立即保存 `STEP_COMPLETED` 检查点，再继续下一已授权步骤。未达到验收条件时记录 `PROGRESS_SAVED` 或 `BLOCKED`，不得标完成。
+4. 任务完成、取消、阻塞、等待交接、关键用户决定变化或外部动作结果确认后，保存对应检查点。
+5. 普通里程碑保存成功后简要报告检查点 ID，并继续已授权工作；不要求用户逐步批准。
+6. 用户要求准备压缩时，无论当前步骤是否完成，都保存真实进度；保存后不启动新步骤、新委派或新外部动作。
+7. `current_state.md` 每次写入都必须是可独立恢复的完整当前状态；`history.md` 只追加 Schema 化事件及快照指针。
 
-1. **任何对话先读 `<PROJECT_ROOT>/TASK_INDEX.md`**（项目任务全景索引；不存在则按新任务处理）。
-2. 用户**不提任何已有任务** → 默认建立**新任务**。
-3. 用户**首句提到**某个已有任务（任务编号或主题） → **询问**用户是否继续该任务。
-4. 用户**明确表示继续旧任务（双次确认：首句提及 + 对询问的明确肯定）** → **不建立新任务**，读该任务 `task_current_state.md` 续接，并在新 CurrentState 中记录 `PRECEDING_TASK_REF`。**续接不改变任务数量，不另立索引区块**。
-5. 续接与并行防护的完整协议见 `OPERATING_RULES.md` §2。
+## 4. 按动作加载详细规则
 
-**任务定义**：
+在执行下列动作前，如果对应文件的完整内容不在当前上下文，就读取它；已经完整存在时不重复读取。压缩后不得用“以前读过”代替当前所需规则。
 
-- 新建 Top-Level Session = 新建 Task；续接例外见上。
-- 同一 Task 内的全部请求、追加、返工、验证和后续交付均属于同一 Task。
-- 同一 Task 不因子目标变化、文件类型变化、跨午夜、上下文压缩、模型切换或调用子 Agent 而创建第二个 Task。
-- 同一 Task 内允许存在多个 **Round**；Round 是一次“需求确认 → Plan → 施工 → 验收 → 关闭”的工作循环，不是新 Task。
-- 若宿主不暴露稳定 Session ID，则将当前顶层用户上下文视为同一 Session，直到用户显式新开顶层会话或明确要求新建 Task。
-
----
-
-## 2. 资产保护（永久约束）
-
-### 2.1 Project Baseline：既有项目树默认原位保护
-
-必须区分：
-
-1. **Project Baseline / Canonical Project Assets**：项目本来就存在的源码、配置、测试、文档、模板、数据目录、构建文件等；
-2. **Task-local Assets**：当前 Task 新增的输入、辅助脚本、中间产物、证据、生命周期账本和独立交付物。
-
-以下内容默认在其 canonical path 原位保留：
-
-- 会话开始前已属于项目结构的源码与模块；
-- 既有 `src/`、`lib/`、`tests/`、`docs/`、`config/`、`assets/`、模板目录等；
-- 版本控制元数据与项目配置；
-- 依赖声明、锁文件、构建配置、CI 配置；
-- README、LICENSE、设计文档；
-- 隐藏配置目录和宿主专用目录；
-- 用户明确声明为共享或长期项目资产的文件。
-
-**修改既有源码时，应在原 canonical path 上做最小必要修改，不得为了目录整洁把它复制/搬进 Task 目录。**
-
-### 2.2 `tasks/` 内目录的真实职责
-
-- `01_inputs/`：当前 Task 的新增原始输入；只读保护。
-- `02_src/`：仅当前 Task 专用且不属于既有项目 canonical tree 的辅助脚本/管线。
-- `03_temp/`：可重建中间产物、缓存、预览和调试文件。
-- `04_evidence/`：日志、diff、OCR 原始结果、验证截图、测试与校验证据。
-- `05_docs/`：生命周期账本与按需 Case。
-- `06_outputs/`：独立可交付产物、导出包、报告、生成文档等。
-
-如果某个新文件实际属于项目正式源码结构，应按 Approved Plan 写入项目 canonical path，而不是为了满足模板强塞进 `02_src/`。文件保护与清理的执行细节见 `OPERATING_RULES.md` §4。
-
----
-
-## 3. 生命周期文档与三本账纪律（永久约束）
-
-### 3.1 默认启用
-
-所有 Task 默认启用：
-
-- `05_docs/plan.md`
-- `05_docs/task_current_state.md`
-- `05_docs/task_history.md`
-- `05_docs/cases/`（目录存在，但不默认创建任何 Case 文件）
-
-状态转换必须遵守 `TASK_STATE_MACHINE.md`。
-
-### 3.2 Plan Gate（流程开关 + 风险时刻条款）
-
-任何**实质施工**前，默认必须完整经过：
-
-`用户提出需求 → Agent 确认理解 → 用户确认需求理解 → Plan 落盘 → 用户批准精确 Plan Revision → 才能施工`
-
-用户确认“你理解对了”不等于批准 Plan。**用户批准不能由模型推定**：沉默、换话题、继续提供信息、仅确认需求理解，都不等于批准 Plan。
-
-在需求确认与计划阶段，允许执行**只读调查和低风险验证**；不得提前执行会改变业务资产、项目行为或外部状态的施工。
-
-**聊天免流程（流程开关）**：不对项目现状产生影响的纯聊天、咨询或讨论（包括工作流程中插入的闲聊），无需进入计划流程，也无需产生任何落盘（不分配 Round、不写 plan.md / task_current_state.md / task_history.md）。
-
-### 3.3 CurrentState 纪律
-
-`task_current_state.md` 是当前 Task 的**唯一当前状态真相**：
-
-- 可全量覆盖；
-- 只描述当前实际状态；
-- 不承担不可变历史职责；
-- 必须与真实文件、验证结果、当前 Approved Plan 和未完成项一致。
-
-### 3.4 History 纪律
-
-`task_history.md` 是 **Append-Only** 的历史快照账本：
-
-- 禁止回写；
-- 禁止修改、删除、重排已存在的历史记录；
-- 每条 History 的 Snapshot Body 必须来自某一时点 `task_current_state.md` 的**完整原文转写**；
-- 不得先总结 CurrentState 再冒充历史快照。
-
-### 3.5 Cases 纪律
-
-`05_docs/cases/` 永远存在，但 Case **只由用户显式指令触发**。
-
-明确触发示例：复盘、记录这个坑、做个 case、总结踩坑、沉淀问题。
-
-**不得**因为出现 Bug、多次返工、任务结束或 Agent 自认为“值得记录”而自动创建 Case。
-
-### 3.6 三本账读取纪律（Search First, Read Narrow）
-
-`plan.md` 与 `task_history.md` 可能增长到数千乃至数万行。**禁止默认整文件读取。**
-
-需要恢复上下文、查找旧 Plan、审批、历史状态或旧验收结果时：
-
-1. **先完整读取 `task_current_state.md`**——获取 `ROUND_ID`、`ACTIVE_PLAN_REF`、`APPROVAL_REF`、`WORKFLOW_PHASE`、`SAFE_RESUME_POINT`、相关 Subject/ID。
-2. 对 `plan.md` 使用内容搜索工具（grep、rg、宿主搜索或等效索引能力）：优先搜索精确 `PLAN_ID` / `PLAN_REF` / `PLAN_EVENT_ID`；其次搜索 `SEARCH:` 中的 `SUBJECT` / `STATUS` / `TAGS`。仅读取命中记录块及必要相邻块。
-3. 对 `task_history.md` 同样先搜索：优先 `ENTRY_ID` / `ROUND_ID` / `PLAN_REF`；其次 `SEARCH:` 中的 `SUBJECT` / `REASON` / `STATUS`。只读取与当前判断直接相关的历史 Snapshot。
-4. 宿主没有内容搜索工具时：优先宿主的文件索引、find-in-file、分块读取等；能限定行范围/块范围时必须限定；全量读取长期账本是**最后手段**，不是默认路径。
-
-允许全读的例外：用户明确要求完整审计/全量复盘；索引损坏且多轮由窄到宽的搜索仍无法定位；正在修复账本自身结构完整性；文件本身刚初始化、规模很小。
-
-`SCHEMA.md`、`TASK_STATE_MACHINE.md`、`OPERATING_RULES.md` 较长时，同样优先按标题、Schema 名、状态名、字段名、Event 类型搜索定位后局部读取。
-
-### 3.7 账本完整性
-
-- `04_evidence/` 默认保留。
-- `task_history.md` **永不自动删除、截断或回写**。
-- 已交付独立产物不得无依据覆盖旧版本。
-- 无法确认来源或用途的文件不自动删除。
-
----
-
-## 4. 目录结构（总纲）
-
-```text
-<PROJECT_ROOT>/
-├── AGENTS.md               ← 本文件（宪法层）
-├── OPERATING_RULES.md      ← 触发纪律层
-├── TASK_STATE_MACHINE.md   ← 机制层
-├── SCHEMA.md               ← 契约层
-├── TASK_INDEX.md           ← 项目任务全景索引（投影式，各任务维护自己的区块）
-├── FILE_INDEX.md           ← 文件归属登记（append-only 流水）
-├── <既有项目 canonical assets ...>
-└── tasks/
-    └── <YYYYMMDD>/
-        └── task<N>_<Description>/
-            ├── 01_inputs/
-            ├── 02_src/
-            ├── 03_temp/
-            ├── 04_evidence/
-            ├── 05_docs/
-            │   ├── plan.md
-            │   ├── task_current_state.md
-            │   ├── task_history.md
-            │   └── cases/
-            └── 06_outputs/
-```
-
-- `TASK_INDEX.md`：**投影式**（可覆盖），是项目内所有任务 current_state 的简略版；每个任务的 Agent 只在轮次结束时更新自己的区块；维护权细节见 `OPERATING_RULES.md` §3。
-- `FILE_INDEX.md`：**append-only** 流水，登记散落文件的归属判定；快速判定与登记流程见 `OPERATING_RULES.md` §5。
-
----
-
-## 5. 触发索引表
-
-以下动作执行前，**必须**先读取 `OPERATING_RULES.md` 对应章节（本表是触发纪律的唯一入口，保证条件触发规则不会被遗忘）：
-
-| WHEN（触发条件） | THEN（必读章节） |
+| 可观察动作 | 必读规则 |
 |---|---|
-| 新建任务 / 续接旧任务 | OPERATING_RULES §2（会话归属与续接协议、并行防护） |
-| 任务创建 / 轮次结束 / 续接接管 | OPERATING_RULES §3（TASK_INDEX 索引维护权） |
-| 修改或清理既有文件、处理原件 | OPERATING_RULES §4（文件保护与清理） |
-| 发现散落文件 / 轮次关闭 | OPERATING_RULES §5（散落文件归属与登记、归属结算） |
-| 派发子 Agent / 委派工作 | OPERATING_RULES §6（委派与协作） |
-| 使用工具执行操作 | OPERATING_RULES §7（工具与执行原则） |
-| 宣布交付完成 | OPERATING_RULES §8（完成门槛） |
+| 新建/续接任务、正式计划、计划修订、完成/取消 | `.agent-protocol/rules/lifecycle.md` |
+| 保存里程碑、历史事件、准备压缩 | `.agent-protocol/rules/checkpoint.md` |
+| 压缩/中断后恢复、记录不一致 | `.agent-protocol/rules/recovery.md` |
+| 修改、覆盖、移动或删除文件；Git 状态变更 | `.agent-protocol/rules/workspace.md` |
+| 创建、修改、调试或评审代码、脚本、软件配置 | `.agent-protocol/rules/implementation.md` |
+| 联网核验或结论依赖易变化的外部事实 | `.agent-protocol/rules/verification.md` |
+| 外发数据、发消息、发布、购买、生产/全局环境或破坏性操作 | `.agent-protocol/rules/external-actions.md` |
 
----
+Schema 不是常驻全文：首次创建记录、字段不确定、写入 plan/history/index 或修复损坏记录时，按 `.agent-protocol/SCHEMA.md` 的目录和精确标题搜索，只读取相关章节。模板可以直接复制后填写。
 
-## 6. 完成门槛（总纲）
+## 5. Search First / Read Narrow
 
-宣布一次交付完成前至少确认：批准的计划修订、账本一致性、无未批准范围扩张、CurrentState 反映真实现状、必要验证真实执行。完整检查清单见 `OPERATING_RULES.md` §8。
+- `current_state.md` 是当前任务的短状态文件，恢复时完整读取。
+- `plan.md`、`history.md` 和 `task_index.md` 是可增长记录，默认禁止全文读取。先从 current_state 获取 `PLAN_REF`、`STEP_ID`、`LAST_EVENT_ID`、`LAST_SNAPSHOT`，再用 `rg`、`grep` 或宿主等效搜索按字段精确定位。
+- 常用检索键固定为：`TASK_ID`、`PLAN_REF`、`STEP_ID`、`EVENT_ID`、`EVENT_TYPE`、`STATUS`、`SUBJECT`、`TAGS`。字段名不得自行改写。
+- 定位后只读取对应的 `*_BEGIN` 到 `*_END` 记录块及必要相邻内容。只有用户要求完整审计、索引损坏需要修复，或文件很小且全文读取成本可忽略时才全读。
+- 搜索无命中不等于记录不存在：检查路径、拼写、大小写、转义和 Schema 版本；仍无结果才按 UNKNOWN 处理。
+
+## 6. 状态与真实世界的关系
+
+- `current_state.md` 是恢复入口，不是不可质疑的唯一事实。用户最新指令、实际文件、运行结果和远端状态可以使它过时。
+- 恢复后先核对下一步依赖的事实，尤其是用户后来修改的文件、后台任务和结果未知的外部动作。
+- 状态里保存授权依据，但旧记录不能扩大授权。目标对象、数据范围、成本或影响发生变化时重新判断。
+- 不把完整聊天、长日志、源码或原始材料复制进状态文件；记录其路径、稳定结论和继续工作所需信息。
+
+## 7. 完成和沟通
+
+- 上下文占用及手动压缩动作由用户自行观察与处理。
+- 检查点写入并读回一致后才能说“已落盘”。任一环节失败时说明已完成到哪、缺少什么，并尝试安全修复；未修复前不得声称可安全压缩。
+- 最终交付说明实际成果、路径、执行过的检查、未验证项和剩余风险。需要用户人工验收时写“待验收”，不得代替用户确认。
+- 不因使用本协议创建固定六目录、复制项目资产、安装全局工具、启动子 Agent 或建立额外审批流程。
+
+## 8. 项目特有约束（由项目维护者填写）
+
+这里应放真实且稳定的项目约定，例如构建/测试入口、禁止修改目录、目标平台和交付格式。没有额外约束时保留为空。不要在这里复制详细规则或临时任务状态。

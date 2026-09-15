@@ -1,389 +1,513 @@
 # Portable Agent Project Operating Protocol
 
-**A set of plain-text files that keep your AI coding assistant (Agent) from losing memory, getting confused, or hallucinating on long-term projects.**
+> 🌐 Chinese version: [README.md](README.md)
 
-No software to install. No code to write. You just copy a few `.md` files to the right places, and your AI assistant automatically follows a "work discipline" that:
+**A portable operating protocol for AI agent projects (PAPOP)**
 
-- ✅ Survives context compression and very long conversations — **history is never lost**
-- ✅ Keeps **memory organized** as the project grows
-- ✅ Stops the model from inventing files, rules, or "facts" that don't exist (anti-hallucination)
-- ✅ Always knows **where the project stands and what to do next**
-- ✅ Keeps project memory even when you **start a new conversation or switch AI tools**
+A set of plain Markdown rules that lets an AI Agent which can read and write files and call tools:
 
-> **中文版请见 [README.md](README.md)** · *Chinese version: [README.md](README.md)*
+- Know when it should act directly and when it must ask;
+- Protect your files, sensitive data, and real authorization boundaries;
+- Save the plan, the current state, and the history at the milestones of a multi-step task;
+- Continue from the state on disk after context compaction, an interruption, or a session change;
+- Search long-term records precisely with `rg` / `grep`, instead of pulling all the history back into context every time.
+
+Project home: [github.com/canpus/portable-agent-project-operating-protocol](https://github.com/canpus/portable-agent-project-operating-protocol)
+
+[See the v3 changelog](CHANGELOG.md)
+
+> It is fine if this is your first contact with an Agentic workflow. This project does not ask you to write code, and it does not need a database or a background service. All you need is to be able to unzip and copy files, and to use an AI tool that can read your project files.
 
 ---
 
 ## Table of Contents
 
-1. [What is this? (30 seconds)](#1-what-is-this-30-seconds)
-2. [Problems it solves](#2-problems-it-solves)
-3. [What's in this repository](#3-whats-in-this-repository)
-4. [What you need](#4-what-you-need)
-5. [Step 1 — Install the Global Constitution (GlobalRules)](#5-step-1--install-the-global-constitution-globalrules)
-6. [Step 2 — Install the Project Discipline (ProjectRules)](#6-step-2--install-the-project-discipline-projectrules)
-7. [Step 3 — Verify the installation](#7-step-3--verify-the-installation)
-8. [How it works](#8-how-it-works)
-9. [FAQ](#9-faq)
-10. [License](#10-license)
-11. [Appendix: path verification](#11-appendix-path-verification)
+1. [What Is This in 30 Seconds](#1-what-is-this-in-30-seconds)
+2. [What Is an Agentic Workflow](#2-what-is-an-agentic-workflow)
+3. [What Problems It Solves](#3-what-problems-it-solves)
+4. [Choose the Version That Fits You](#4-choose-the-version-that-fits-you)
+5. [Repository Structure](#5-repository-structure)
+6. [Before You Install](#6-before-you-install)
+7. [Installing GlobalRules](#7-installing-globalrules)
+8. [Installing ProjectRules](#8-installing-projectrules)
+9. [Verify the Rules Are Active](#9-verify-the-rules-are-active)
+10. [Everyday Usage](#10-everyday-usage)
+11. [Simple Tasks vs. Long-Running Tasks](#11-simple-tasks-vs-long-running-tasks)
+12. [Plans, Checkpoints, and the Three Kinds of Records](#12-plans-checkpoints-and-the-three-kinds-of-records)
+13. [You Decide When to Compact Context](#13-you-decide-when-to-compact-context)
+14. [How to Recover After Compaction or a Session Change](#14-how-to-recover-after-compaction-or-a-session-change)
+15. [Schema-Formatted History and Precise Search](#15-schema-formatted-history-and-precise-search)
+16. [Safety Boundaries](#16-safety-boundaries)
+17. [Upgrading from an Older Version](#17-upgrading-from-an-older-version)
+18. [FAQ](#18-faq)
+19. [Known Limitations](#19-known-limitations)
+20. [License](#20-license)
 
 ---
 
-## 1. What is this? (30 seconds)
+## 1. What Is This in 30 Seconds
 
-It is **two sets of rule files + a self-running bookkeeping system**:
+Ordinary chat depends on what the model “remembers” right now. As the conversation grows longer, the harness may compact the context; the model may also forget old constraints, mix up steps that are already done, or even repeat an external action whose result it never learned.
 
-| Part | What it is | Analogy |
-|------|-----------|---------|
-| `GlobalRules/AGENTS.md` | **Global Constitution**: ground rules your AI must follow in *every* project (no lying, no inventing facts, protect your files, don't touch system settings…) | "Family rules" at home |
-| `ProjectRules/` (4 files) | **Project Discipline**: workflow rules that apply inside *one specific project* (write a plan before working, keep state, keep history…) | "Class rules" for one class |
-| Self-running bookkeeping | The AI automatically creates a `tasks/` directory, a project task index (`TASK_INDEX.md`) and a file registry (`FILE_INDEX.md`) in your project, and keeps three ledgers: plan, current state, and history snapshots | The class "duty log" |
+PAPOP writes two kinds of things into portable text files:
 
-You put the rule files where your AI tool looks for them → the AI reads them at the start of every session → it keeps the ledgers while working → at any moment, opening the "current state" file tells you exactly where things stand.
+| Layer | What it does | Do you have to use it? |
+|---|---|---|
+| `GlobalRules` | Constrains facts, permissions, data, files, execution, and verification behavior in every task | Recommended |
+| `ProjectRules` | Adds planning, saving milestones to disk, history search, and recovery to a project | For long-running or multi-step projects |
 
-> This repository itself was produced using these very rules: plans were written and approved before any work, the README was reviewed before release, and every step kept evidence. Curious? Look at the `task1_GitHub_Publish/` folder in this repository's root — it's the real ledger of this project's own creation (a snapshot at release time; the author's local workspace ledger keeps evolving). Once you deploy these rules, your own project will grow the same kind of ledgers.
+The core idea is:
 
----
+```text
+Global rules constrain behavior
+        ↓
+The project entry point decides whether the task needs records
+        ↓
+Important milestones write the current state to disk
+        ↓
+After compaction, read only the current state, the current plan, and the rules needed for the next step
+```
 
-## 2. Problems it solves
+The “memory” here does not give the model permanent memory out of thin air. It lets the model get a reliable working state back out of your project files.
 
-Using an AI assistant on a medium-sized project (a multi-file program, a batch of reports, a long-lived document), you'll hit five classic problems:
+## 2. What Is an Agentic Workflow
 
-| # | Problem | Why it happens | How this protocol solves it |
-|---|---------|---------------|----------------------------|
-| 1 | **The AI "forgets" in long conversations** | Context gets compressed; early agreements, fields, and naming get crushed | All important information was already written to the on-disk "current state" file — compression can't delete it |
-| 2 | **History becomes confusing** | The longer the context, the harder it is to tell "what was said before" from "what is decided now" | The plan ledger is append-only; the full decision trail stays inspectable |
-| 3 | **Hallucination** | When the model can't remember, it "reasonably invents" files, rules, and conclusions | The constitution explicitly forbids fabrication; anything unverified must be labeled as unverified |
-| 4 | **Current state lost mid-task** | Interrupted halfway, the AI doesn't know what's done and what's next | Every step leaves a trace in the "current state" file; recovery is always possible |
-| 5 | **New conversation = total amnesia** | A fresh window knows nothing about the project | A new conversation first reads the "current state" file and takes over seamlessly (the state machine has a dedicated recovery protocol) |
+Ordinary Q&A is usually “you ask one question, the AI answers one question”. An Agentic workflow is more like handing a job to an assistant: it reads files, works out the steps, calls tools, changes content, checks the results, and keeps pushing until the work is deliverable.
 
-In one sentence: **move memory out of the model's head and into files on disk.** Models change and conversations close; files don't.
+A few common terms:
 
----
+| Term | Plain-language explanation |
+|---|---|
+| Agent | An AI assistant that can use tools and carry out multi-step tasks |
+| Harness | The software that runs the Agent, such as a terminal tool, an editor, or a desktop app |
+| Context | The information the Agent can see in the current session |
+| Token | The unit used to measure the information a model processes; it is not the same as character count |
+| Context compaction | The harness condenses a long history into something shorter, so details can be lost |
+| Persist to disk | Write the state into real files, not just into a chat reply |
+| Milestone | A verifiable point, for example a finished plan revision or a finished plan step |
+| Checkpoint | A state that has been written and checked, and can be used later to resume work |
+| Schema | Fixed fields, IDs, and record formats, so a machine can find things precisely |
 
-## 3. What's in this repository
+You do not need to memorize every term. In daily use you only need to be able to say: “start this task”, “save first, I am about to compact”, “read the state and continue”.
+
+## 3. What Problems It Solves
+
+### Problem 1: The model did the work, but there is no reliable evidence
+
+GlobalRules requires the Agent to separate confirmed facts, inferences, and unverified items. Without actually reading, running, or checking something, it must not claim the work is done.
+
+### Problem 2: The AI asks too much, or crosses the line
+
+The rules clearly separate two cases:
+
+- You have already asked for a piece of work, so ordinary, reversible steps inside that task are carried out directly;
+- Publishing, buying, sending private material outside, production changes, destructive operations, and similar actions need specific authorization.
+
+### Problem 3: Even simple tasks are forced to build a complicated ledger
+
+ProjectRules uses `AUTO` by default: a small task that can be finished in the current continuous run uses FAST and creates no ledger; it is only upgraded to TRACKED when it needs a plan, a wait, a handoff, or recovery after compaction.
+
+### Problem 4: The goal and the progress are lost after compaction
+
+A TRACKED task saves a checkpoint after each formal plan revision and after each completed plan step. Before you decide to compact, have the Agent save one more `PRE_COMPACTION` checkpoint.
+
+### Problem 5: History keeps growing, and recovery keeps getting more expensive
+
+`current_state.md` stays short and can be read in full; `plan.md`, `history.md`, and `task_index.md` use fixed fields and block boundaries, so the Agent searches for an ID first and then reads a single record block.
+
+## 4. Choose the Version That Fits You
+
+The Release provides two ZIP files:
+
+### GlobalRules only
+
+This fits you if:
+
+- You only want to constrain the Agent's behavior;
+- You do not need a project ledger;
+- You mostly handle short tasks or ordinary Q&A;
+- You do not want state files to appear in your project directory.
+
+After installing it, you get rules for task progression, when to ask, fact checking, data boundaries, file protection, execution, verification, and delivery.
+
+### GlobalRules + ProjectRules
+
+This fits you if:
+
+- Your task contains several plan steps;
+- You compact the context on purpose;
+- You need to continue across sessions;
+- You want to keep plan revisions, key decisions, verification evidence, and dead ends;
+- You need to trace history precisely with `grep`.
+
+If you are not sure, install GlobalRules first. When you hit your first project that needs long-term maintenance, install ProjectRules into that project.
+
+## 5. Repository Structure
 
 ```text
 portable-agent-project-operating-protocol/
-├── README.md                        ← This document (Chinese) / README_EN.md (English)
-├── LICENSE                          ← MIT license
+├── README.md
+├── CHANGELOG.md
+├── LICENSE
 ├── GlobalRules/
-│   └── AGENTS.md                    ← Global Constitution (works across projects, machines, tools)
+│   └── AGENTS.md
 └── ProjectRules/
-    ├── AGENTS.md                    ← Project Discipline · Constitution layer (what to do, which way to go; injected every session)
-    ├── OPERATING_RULES.md           ← Project Discipline · Triggered rules layer (condition-triggered: exactly how)
-    ├── TASK_STATE_MACHINE.md        ← Mechanism layer (state machine: when you can do what, when you must wait for approval)
-    └── SCHEMA.md                    ← Contract layer (how ledgers are written, how IDs work)
+    ├── AGENTS.md
+    └── .agent-protocol/
+        ├── SCHEMA.md
+        ├── rules/
+        │   ├── lifecycle.md
+        │   ├── checkpoint.md
+        │   ├── recovery.md
+        │   ├── workspace.md
+        │   ├── implementation.md
+        │   ├── verification.md
+        │   └── external-actions.md
+        └── templates/
+            ├── active.md
+            ├── task-index-event.md
+            ├── plan-revision.md
+            ├── current-state.md
+            └── history-event.md
 ```
 
-- `GlobalRules/AGENTS.md` — **install once, applies to all projects.** It's the "behavior constitution": no hallucination, protect your existing files, no unauthorized data sharing, no touching system settings…
-- `ProjectRules/` (4 files) — **install once per project.** They define the full lifecycle of an "agent task": requirements confirmation → plan → your approval → implementation → acceptance → history, plus the exact format of the three ledgers.
+`ProjectRules/AGENTS.md` is the single entry point for the project rules. The detailed rules in `.agent-protocol/` are not all loaded all the time; the entry point picks the files to read based on the current action.
 
-> Note: the rule files themselves are written in Chinese. That's fine — AI assistants understand Chinese rules no matter what language you chat in. You may translate them, but keeping the originals avoids translation drift in the rules that govern your work.
+The repository also keeps two kinds of historical material. They are not part of the active v3 rules and do not affect installation or use:
 
----
+- `legacy/v1/`: the original project rules of v0.2.0 and earlier (`OPERATING_RULES.md`, `TASK_STATE_MACHINE.md`, `SCHEMA.md`), kept only for comparison with old versions, not the current entry point;
+- `task1_GitHub_Publish/`: a real ledger snapshot from the initial release process, kept as historical evidence.
 
-## 4. What you need
+## 6. Before You Install
 
-1. **A computer** (Windows / macOS / Linux)
-2. **An AI coding assistant** (below called a "Harness" — an AI tool that can read and write files in your project, e.g., OpenAI Codex, Claude Code, Cursor, ZCode, GitHub Copilot, Windsurf)
-3. **A project folder** (the folder containing the work you want the AI to help with)
-4. **The ability to create folders and copy-paste files** — that's all
+You need:
 
-> On Windows, the folder named after you inside `C:\Users\` is **the folder that corresponds to your username**. Everywhere below, `your username` refers to it — replace it with your actual username (e.g. `ZhangSan`). **Do not copy the placeholder literally, and do not add any brackets** (`( )` `[ ]` `{ }` `< >`).
+1. An Agent tool that can read files, and ideally can also change files and run commands;
+2. A project folder that you are ready to hand over to the Agent;
+3. Normal backups of anything important.
 
----
+Download the ZIP from the Release and unzip it. Some systems hide directories that start with a dot; when you use the full package, make sure you can see `.agent-protocol/`.
 
-## 5. Step 1 — Install the Global Constitution (GlobalRules)
+Rule files are only behavior instructions. They do not give the Agent any permission that the harness does not already provide. A tool that can only chat and cannot access your project files cannot use the project's persistent state features.
 
-**What this does:** put `GlobalRules/AGENTS.md` in your AI tool's "global rules" location. After that, the tool follows the constitution in *every* project.
+## 7. Installing GlobalRules
 
-**Why it's per-tool:** different tools look for global rules in different locations and with different filenames. Instructions below are per tool — **only read the section for the tool(s) you use.**
+Put `GlobalRules/AGENTS.md` in the global rules location of the tool you use, or paste the whole content into the User Rules / Global Instructions that the tool provides.
 
-### 5.1 Generic steps (same for every tool)
+### Codex example
 
-1. Get `GlobalRules/AGENTS.md` (from the repository source, or from the `GlobalRules` folder after extracting the release zip)
-2. Create the target folder listed below for your tool (create it if missing), and **copy the file there**
-3. Rename the file if required (some tools want `AGENTS.md`, some want `CLAUDE.md` — see below)
-4. Restart / open a **new** conversation so the rules load
+| System | Default location |
+|---|---|
+| Windows | `C:\Users\your-username\.codex\AGENTS.md` |
+| macOS / Linux | `~/.codex/AGENTS.md` |
 
-### 5.2 Per-tool installation paths
+In the Windows path, replace “your-username” with your own user directory name. If `CODEX_HOME` is set, use that directory instead. When a non-empty `AGENTS.override.md` sits next to it, Codex loads the override first. For details, see [the official Codex documentation for AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
 
-#### ① ZCode
+### Other Agent tools
 
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.zcode\AGENTS.md` | `AGENTS.md` (no rename) |
-| macOS | `/Users/your username/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
-| Linux | `/home/your username/.zcode/AGENTS.md` | `AGENTS.md` (no rename) |
+Different tools use different file names, locations, and character limits for global rules, and these can change between versions. Search the tool's current official documentation for:
 
-- Create the `.zcode` folder if it doesn't exist.
-- After this, every ZCode session automatically injects the constitution.
+- Global instructions / User rules;
+- Memory / Custom instructions;
+- AGENTS.md / CLAUDE.md / Rules.
 
-#### ② OpenAI Codex (CLI)
+Make sure the rules are really loaded. Do not just drop the file into a directory that looks reasonable. If the tool has no global file mechanism, paste the content into its global rules settings instead.
 
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.codex\AGENTS.md` | `AGENTS.md` (no rename) |
-| macOS | `/Users/your username/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
-| Linux | `/home/your username/.codex/AGENTS.md` | `AGENTS.md` (no rename) |
+## 8. Installing ProjectRules
 
-- Tip: Codex also checks for `C:\Users\your username\.codex\AGENTS.override.md` first (only one of the two is used, whichever exists). If you already have an override file, put the constitution content there instead — same effect.
-- Do **not** put the file inside a project-local `.codex` folder — Codex only reads `~/.codex` and the project-root `AGENTS.md`.
+Install this only when you need the project state features.
 
-#### ③ Claude Code
-
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.claude\CLAUDE.md` | **Rename `AGENTS.md` to `CLAUDE.md` first** |
-| macOS | `/Users/your username/.claude/CLAUDE.md` | same |
-| Linux | `/home/your username/.claude/CLAUDE.md` | same |
-
-1. **Rename** `GlobalRules/AGENTS.md` to `CLAUDE.md` (copy it first if you want to keep the original name too).
-2. Put the renamed file into `C:\Users\your username\.claude\` (create the `.claude` folder if missing).
-3. Claude Code then loads it in every project.
-- Note: Claude Code officially suggests keeping each `CLAUDE.md` under 200 lines for context efficiency. This constitution is ~590 lines; Claude Code loads it **in full** (officially no truncation), it just consumes context. If context is tight, move the core chapters to the global file and the rest to project-level rules (see FAQ "File too long").
-
-#### ④ Cursor
-
-Recommended: use the settings UI (most reliable, cloud-synced, survives machine changes):
-
-1. Open Cursor → Settings → `Customize` → `Rules`
-2. Find **User Rules**, paste the **entire content** of `GlobalRules/AGENTS.md` there
-3. Save. Applies to all projects.
-
-If you prefer a file (optional — officially documented, but some versions have unreliable auto-loading per community reports):
-
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.cursor\rules\global.mdc` | extension must be `.mdc` |
-| macOS | `/Users/your username/.cursor/rules/global.mdc` | same |
-| Linux | `/home/your username/.cursor/rules/global.mdc` | same |
-
-> Safest: use Settings → Rules. The file approach is a fallback.
-
-#### ⑤ GitHub Copilot (VS Code / CLI)
-
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.copilot\instructions\global.instructions.md` | extension must be `.instructions.md` |
-| macOS | `/Users/your username/.copilot/instructions/global.instructions.md` | same |
-| Linux | `/home/your username/.copilot/instructions/global.instructions.md` | same |
-
-- Create the `.copilot\instructions` folders if missing.
-- For the Copilot CLI, a single-file alternative also works: `C:\Users\your username\.copilot\copilot-instructions.md` (same full content).
-
-#### ⑥ Windsurf
-
-| OS | Path | Filename |
-|----|------|----------|
-| Windows | `C:\Users\your username\.codeium\windsurf\memories\global_rules.md` | filename is fixed: `global_rules.md` |
-| macOS | `/Users/your username/.codeium/windsurf/memories/global_rules.md` | same |
-| Linux | `/home/your username/.codeium/windsurf/memories/global_rules.md` | same |
-
-- Paste the **full content** of `GlobalRules/AGENTS.md` into `global_rules.md` (note: this file has a 6,000-character limit — if it doesn't fit, keep the core chapters).
-- You can also edit global rules from the Customizations icon in the top-right of Windsurf's Cascade panel.
-
-### 5.3 Quick-reference table (bookmark this page)
-
-| Tool | Windows path | Filename | Verified |
-|------|--------------|----------|----------|
-| ZCode | `C:\Users\your username\.zcode\` | `AGENTS.md` | ✅ |
-| Codex CLI | `C:\Users\your username\.codex\` | `AGENTS.md` | ✅ |
-| Claude Code | `C:\Users\your username\.claude\` | rename to `CLAUDE.md` | ✅ |
-| Cursor | Settings → Rules (recommended) or `C:\Users\your username\.cursor\rules\` | `.mdc` | ✅/⚠️ |
-| GitHub Copilot | `C:\Users\your username\.copilot\instructions\` | `.instructions.md` | ✅ |
-| Windsurf | `C:\Users\your username\.codeium\windsurf\memories\` | `global_rules.md` | ✅ |
-
-On macOS replace `C:\Users\your username\` with `/Users/your username/`; on Linux with `/home/your username/`. Everything else stays the same.
-
----
-
-## 6. Step 2 — Install the Project Discipline (ProjectRules)
-
-**What this does:** copy the **4 files** from `ProjectRules/` into the root of the project you want to manage. The AI then follows the "plan → your approval → implement → keep ledgers" workflow inside that project.
-
-### 6.1 Steps
-
-1. Copy **all 4 files** from `ProjectRules/` into your project root:
-   - `AGENTS.md`
-   - `OPERATING_RULES.md`
-   - `TASK_STATE_MACHINE.md`
-   - `SCHEMA.md`
-2. **All four files must sit in the same folder, next to each other** (`AGENTS.md` references the other three by relative filename — separated files won't be found).
-3. If your project root already has an `AGENTS.md` (e.g. team rules), don't overwrite it — merge the contents, or put the `ProjectRules` quartet in a subfolder and add a one-line reference from the existing `AGENTS.md` (see FAQ "My project already has an AGENTS.md").
-4. How each tool reads project-level rules (filenames differ from the global level):
-
-| Tool | Project-level reading |
-|------|----------------------|
-| ZCode / Codex / Copilot / Cursor | `AGENTS.md` at the project root is auto-read (keep all four files as-is in the root) |
-| Claude Code | `CLAUDE.md` at the project root is auto-read — **copy `AGENTS.md` and rename it `CLAUDE.md`** in the project root (keeping `AGENTS.md` too is fine) |
-| Windsurf | root `AGENTS.md` is always active; content can also go into `.windsurf/rules/*.md` |
-
-5. **You create nothing manually** — the first time the AI works in the project, it automatically creates the `tasks/` directory and the three ledgers, plus `TASK_INDEX.md` (project task index) and `FILE_INDEX.md` (file registry) in the project root, as the rules require. You only need to have placed the files correctly.
-
-### 6.2 What you'll see on the first task
-
-The AI will automatically create:
+Copy **everything inside** `ProjectRules/` into the root of the target project:
 
 ```text
 your-project/
-├── AGENTS.md                        ← placed by you
-├── OPERATING_RULES.md               ← placed by you
-├── TASK_STATE_MACHINE.md            ← placed by you
-├── SCHEMA.md                        ← placed by you
-├── TASK_INDEX.md                    ← created automatically (project task index)
-├── FILE_INDEX.md                    ← created automatically (file registry)
-└── tasks/                           ← created automatically
-    └── 20260819/
-        └── task1_XXX/
-            ├── 01_inputs/           ← input materials
-            ├── 02_src/              ← helper scripts
-            ├── 03_temp/             ← temporary artifacts
-            ├── 04_evidence/         ← evidence
-            ├── 05_docs/             ← the three ledgers live here!
-            │   ├── plan.md
-            │   ├── task_current_state.md
-            │   ├── task_history.md
-            │   └── cases/
-            └── 06_outputs/          ← deliverables
+├── AGENTS.md
+├── .agent-protocol/
+└── your existing source code, documents, images, or data...
 ```
 
-Seeing this structure means the discipline is active. **`task_current_state.md` (current state) is the heart of it all** — open it any time to know exactly where the project stands.
+Things to watch out for:
 
----
+- Do not wrap the `ProjectRules` folder itself in an extra folder layer;
+- Do not miss the hidden `.agent-protocol/`;
+- Do not move your project's existing material into `.agent-protocol/`;
+- If the project already has an AGENTS.md, back it up and merge first; do not overwrite the project's own rules;
+- Build commands, test entry points, protected directories, and business requirements in the original project rules should stay.
 
-## 7. Step 3 — Verify the installation
+If your harness does not automatically read the AGENTS.md in the project root, put the entry-point content into the project rules location it does support; at the same time, make sure the relative paths still point to `.agent-protocol/` in the project root.
 
-**Method:** open a **new** conversation with your AI tool (important: new session, so rules reload), and ask:
+## 9. Verify the Rules Are Active
 
-> "Which rule files did you load? Please list your global rules and project rules."
+After installing, start a new session. In a test project, ask:
 
-**How to judge:**
+> Please actually check which rule sources are currently loaded, and tell me: what the global rules constrain; where the single entry point of the project rules is; how FAST and TRACKED are decided; which files are saved after a plan step is completed; and, during recovery, which files are read in full and which must be searched first. Do not create any task records for now.
 
-- ✅ **Working:** it names the locations and key concepts of the rules (e.g. "three ledgers", "plan.md", "state machine", "approve before implementing", "no fabricating facts"), and explains what they do.
-- ❌ **Not working:** it looks blank and says "I received no rules." Then check:
-  1. Is the path right — in particular, **did you replace the placeholder `your username` with your real username**? Beginners often copy-paste the whole path and leave the placeholder in it (or add brackets around it). The path must contain your real username and nothing else — no "your username" text, no brackets.
-  2. Is the filename right (`CLAUDE.md` for Claude, `.instructions.md` for Copilot, `.mdc` for Cursor)?
-  3. Is it a fresh conversation (old conversations don't reload rules)?
-  4. Has the tool been restarted?
+Correct behavior should include:
 
-**One more test** (proves memory survival across conversations): give the AI a task, let it create `tasks/` and do a couple of steps, then **close the conversation, open a new one**, and ask as your first sentence:
+- Being able to locate the AGENTS.md in the project root;
+- Being able to find `.agent-protocol/SCHEMA.md` and the seven detailed rule files;
+- Knowing that an ordinary small task does not necessarily create a ledger;
+- Knowing that `current_state.md` is read in full, while the long-term history/plan/index files are searched first;
+- Not creating a state directory on its own just because you are verifying the installation.
 
-> "What were we working on in the previous conversation? Where are we now?"
+Then do a two-step exercise in the test project, and check whether real files appear with the structure described later in this document. A correct spoken answer is not enough; you have to watch the actual writes.
 
-It first reads `TASK_INDEX.md` (the project task index), recognizes which task your "previous conversation" refers to, and **asks whether you want to continue that task** — after you confirm, it opens that task's `task_current_state.md` and accurately answers the task ID, current phase, and next step. That's "no memory loss across conversations", demonstrated live.
+## 10. Everyday Usage
 
----
+### Starting a simple task
 
-## 8. How it works
+Just describe the goal:
 
-### 8.1 The three ledgers
+> Fix the path error in this config file, and check that the config still loads correctly.
 
-| Ledger | File | Nature | Purpose |
-|--------|------|--------|---------|
-| Plan ledger | `05_docs/plan.md` | append-only, never rewritten | Records "what you asked → how the AI planned → what you approved"; the full decision trail |
-| Current state | `05_docs/task_current_state.md` | overwritable, always reflects now | Answers "where are we, what's next"; the single source of truth for recovery |
-| History snapshots | `05_docs/task_history.md` | append-only, never rewritten | Archives a complete copy of "current state" at each milestone — an immutable timeline |
+If it meets the FAST conditions, the Agent handles it directly and does not create `.agent-work/`.
 
-### 8.2 The state machine (when you can do what)
+### Starting a multi-step task
 
-`TASK_STATE_MACHINE.md` defines a task's lifecycle:
+> Rewrite the project documentation based on these materials. First build a formal plan with milestones and acceptance criteria, then run it; save a checkpoint after each plan step is completed.
+
+Once the formal plan is written, TRACKED switches on automatically.
+
+### Asking to review the plan first
+
+By default, v3 does not force every task to wait for plan approval. If you really do want to see the plan first, say so explicitly:
+
+> Investigate first and save the formal plan to disk; wait for my approval before you change any project files.
+
+### Changing the requirements
+
+When the goal or the deliverable clearly changes, tell the Agent directly. It should append a new plan revision that explains how the old steps are inherited or replaced, and it should keep the finished results and their evidence.
+
+## 11. Simple Tasks vs. Long-Running Tasks
+
+The project entry point defaults to:
 
 ```text
-requirements → plan → your approval → implementation → delivery → your acceptance → close
-                    ↑                                    │
-                    └───── not approved? revise ────────┘
+RECORD_MODE: AUTO
 ```
 
-Three key gates:
+### FAST
 
-- **Plan Gate:** any substantial change requires an approved plan first. The AI cannot modify your code on a whim.
-- **Approval comes only from you:** the AI may never interpret "you stayed silent" as "you approved."
-- **Acceptance gate:** when work is done, the AI delivers and states what it verified; you accept — the AI can't sign off on its own work.
+Use it only when all of the following hold:
 
-### 8.3 Recovery after a new conversation / new machine
+- No formal multi-step plan is needed;
+- The work is expected to finish in this one continuous run;
+- Nothing is waiting on a background task, an external result, or a user decision;
+- There are no intermediate results or complex decisions that must survive compaction;
+- You have not asked for records, a handoff, or continuing later.
 
-**New conversation (same project):**
+### TRACKED
 
-1. The AI first reads `TASK_INDEX.md` in the project root (the panorama: which tasks exist, where each one stands)
-2. If you mention an old task, the AI asks whether to continue it; after your confirmation (double confirmation) it **continues that task** (no new task is created — the task count never changes)
-3. It opens that task's `05_docs/task_current_state.md` and gets the task ID, phase, progress, and approved plan reference
-4. For details, it searches `plan.md` / `task_history.md` by ID and reads only the relevant blocks
-5. It resumes from the "safe resume point"; if a parallel session is suspected, the AI warns you proactively and verifies
+It switches on as soon as any one of these appears:
 
-**New machine:** copy the whole project folder — `tasks/`, `TASK_INDEX.md`, `FILE_INDEX.md` and the four rule files are all part of the memory. The AI on the new machine reads the index and continues or starts tasks exactly the same way.
+- A plan with two or more milestones is about to be built;
+- There are intermediate results or decisions that later steps depend on;
+- The work needs to wait, be handed off, cross sessions, or continue after compaction;
+- There is an external action that must not be blindly retried after recovery;
+- You explicitly asked for the plan, the state, or the history to be saved to disk.
 
-The same mechanism handles context compression: compression may lose the model's memory, but not the ledgers on disk.
+A task can be upgraded from FAST to TRACKED, but it is not downgraded again and again before it is done. When you upgrade, record only the facts you already have; do not invent history that never happened.
 
-### 8.4 How anti-hallucination is enforced
+If you want every real task in the project to be recorded, change AUTO to TRACKED in the project AGENTS.md. Pure Q&A still creates no ledger.
 
-Hard requirements in the constitution include:
+## 12. Plans, Checkpoints, and the Three Kinds of Records
 
-- Never claim to have read files you didn't read, or say "tests passed" without running them
-- Inferences and assumptions must be labeled separately from confirmed facts
-- Unverified information must be stated as "unverified", not packaged as conclusions
-- Even user statements get "bounded skepticism": if cheap to verify, verify before believing
+A TRACKED task creates this in the project root:
 
----
+```text
+.agent-work/
+├── active.md
+├── task_index.md
+└── tasks/<TASK_ID>/
+    ├── current_state.md
+    ├── current_state.prev.md
+    ├── plan.md
+    ├── history.md
+    └── snapshots/<EVENT_ID>.md
+```
 
-## 9. FAQ
+Each one has a different job:
 
-**Q1: Do I need to install any software?**
-No. Everything is plain-text `.md` files — copy and paste. No configuration changes to your AI tool (other than placing the rule files correctly).
+| File | Can it be overwritten? | Purpose | Read in full during a normal recovery? |
+|---|---|---|---|
+| `active.md` | Yes | Quick pointer to the current task | Yes |
+| `current_state.md` | Yes | The full current recovery state | Yes |
+| `current_state.prev.md` | Yes | The previous valid state, used to repair an interrupted write | Only when something goes wrong |
+| `plan.md` | Append-only | Every formal plan revision | No, search by PLAN_REF |
+| `history.md` | Append-only | Milestone event summaries and snapshot paths | No, search by EVENT_ID and so on |
+| `snapshots/` | Never written back after creation | The full state at each event's point in time | Only when something goes wrong, when auditing, or when facts conflict |
+| `task_index.md` | Append-only | Task status events inside the project | No, search by TASK_ID |
 
-**Q2: Will these rules mess with my code?**
-No. The rules require: plan → your approval before modifying project files; read-only investigation only before approval; minimal modifications that preserve your existing content. All ledgers live in `tasks/`, separate from your project files.
+A completed plan step means the step reached the acceptance criteria written in the plan. If only part of it is done, the event should be `PROGRESS_SAVED`; you must not write it as completed just to “move on to the next step”.
 
-**Q3: I use two tools (e.g. Codex + Claude Code). How many copies?**
-Project level: one `AGENTS.md` in the project root works for both; for Claude Code, also copy it as `CLAUDE.md`. Global level: one copy per tool (per section 5.2). Having multiple copies of identical rules is harmless.
+After each ordinary milestone is finished, the Agent saves and checks the checkpoint, then carries on with work it is already authorized to do. You do not have to approve it step by step.
 
-**Q4: The constitution is long (~590 lines). Will Claude Code fail to load it?**
-Claude Code officially loads `CLAUDE.md` in full, no truncation; but it recommends under 200 lines per file to save context. If tight, keep only the core chapters (honesty, asset protection, data boundaries) in the global `CLAUDE.md` and move the rest to project-level rules.
+## 13. You Decide When to Compact Context
 
-**Q5: My project already has an AGENTS.md. Conflict?**
-No conflict, but don't overwrite existing rules. Recommended: put the `ProjectRules` quartet in a subfolder (e.g. `docs/agent-rules/`), then add one line at the end of the existing `AGENTS.md`: "See also the rules in `docs/agent-rules/`, which have equal effect." Most tools read rule files at any depth within a project.
+This protocol does not ask the model to monitor context usage, and there is no universal Token threshold. You decide when to compact, based on how the model and the harness you use behave.
 
-**Q6: The default timezone is Asia/Shanghai. Can I change it?**
-Yes. Open the project-root `AGENTS.md`, find line 6 "默认项目时区：Asia/Shanghai", and change it to your timezone. Takes effect in a new conversation.
+When you are ready to compact, send:
 
-**Q7: What about switching computers?**
-Global constitution: re-place it per section 5.2 on the new machine. Project memory: copy the whole project folder (including `tasks/`, `TASK_INDEX.md`, `FILE_INDEX.md`) — the ledgers *are* the memory. On the new machine, the AI reads `TASK_INDEX.md` and `task_current_state.md` and continues seamlessly.
+> I need to compact the context next. Please save and verify a PRE_COMPACTION checkpoint following checkpoint.md, keeping the current plan, step status, user decisions, authorizations, evidence, unfinished items, dead ends, and the next step. After saving, pause, do not start any new work, and give me the current_state path.
 
-**Q8: If I update the rule files, do old ledgers break?**
-No. Ledgers are append-only; rule files are editable; the two don't interfere. Changing rules affects future work only; history stays intact.
+The Agent should:
 
-**Q9: The AI doesn't follow the rules. What now?**
-Check placement and filenames (see section 7). If placed correctly and still ignored, prompt it directly: "Please follow the rules in AGENTS.md in the project root." Note that different tools have different rule-loading quirks (e.g. some Cursor versions are unreliable at loading user-level files) — if a tool persistently ignores rules, switch to that tool's officially recommended configuration (e.g. Cursor's settings UI).
+1. Stop starting new steps, delegations, and external actions;
+2. Record the real current progress, and not mark unfinished steps as DONE;
+3. Update current_state;
+4. Save a snapshot with the same EVENT_ID;
+5. Append an event to history;
+6. Read all three back and cross-check them;
+7. Give you the recovery path and wait.
 
-**Q10: Which AI tools are supported?**
-Verified: ZCode, OpenAI Codex, Claude Code, Cursor, GitHub Copilot, Windsurf. Since `AGENTS.md` is becoming a cross-tool standard (supported by 20+ tools), most modern AI coding tools work directly. For others, check their official docs for `AGENTS.md` / `CLAUDE.md` support.
+If it reports that one of the writes failed, do not rush to compact. Have it repair the records following recovery.md first.
 
----
+## 14. How to Recover After Compaction or a Session Change
 
-## 10. License
+After compaction is done, send:
+
+> Please read `<current_state path>`, check LAST_EVENT_ID, the snapshot, and the current PLAN_REF following recovery.md, inspect the real files the next step depends on, load the rules the next step needs, and then continue. Do not restart the task.
+
+The normal recovery order is:
+
+1. Read current_state in full;
+2. Locate LAST_EVENT_ID in history precisely;
+3. Locate the PLAN_REF in plan precisely;
+4. Check the files and the external state related to the next step;
+5. Load the rules the next action needs;
+6. Continue the unfinished steps.
+
+State is only the entry point for recovery. You may have changed files while the context was compacted, and background operations may already have finished; the Agent must check the real situation. It must not blindly trust old state or repeat an external action.
+
+## 15. Schema-Formatted History and Precise Search
+
+In long-term files, machine fields always sit on their own line, for example:
+
+```text
+EVENT_ID: E-000014
+TASK_ID: T-20260915-auth-fix
+PLAN_REF: P-0001-R0002
+STEP_ID: S-003
+EVENT_TYPE: STEP_COMPLETED
+STATUS: SUCCESS
+SUBJECT: Login refresh test completed
+TAGS: auth, regression
+```
+
+Records also use fixed boundaries:
+
+```text
+<!-- HISTORY_EVENT_BEGIN -->
+...
+<!-- HISTORY_EVENT_END -->
+```
+
+Common searches:
+
+```text
+rg -n '^EVENT_ID: E-000014$' .agent-work/tasks/<TASK_ID>/history.md
+rg -n '^PLAN_REF: P-0001-R0002$' .agent-work/tasks/<TASK_ID>/plan.md
+rg -n '^STEP_ID: S-003$' .agent-work/tasks/<TASK_ID>/history.md
+rg -n '^EVENT_TYPE: PLAN_REVISED$' .agent-work/tasks/<TASK_ID>/history.md
+rg -n '^TAGS: .*auth' .agent-work/tasks/<TASK_ID>/history.md
+rg -n '^TASK_ID: T-20260915-auth-fix$' .agent-work/task_index.md
+```
+
+`rg` is ripgrep; if you do not have it, you can use `grep`, your editor's search, or the file search your harness provides. Once the search gives you a line number, read only the matching record block from BEGIN to END.
+
+Natural-language search is good for finding candidates; stable IDs are good for confirming a specific record. If a search finds nothing, check the path, the capitalization, the escaping, and the Schema version first, instead of immediately assuming the record does not exist.
+
+For the full field, ID, and enum definitions, see `ProjectRules/.agent-protocol/SCHEMA.md`.
+
+## 16. Safety Boundaries
+
+PAPOP requires the Agent to:
+
+- Not treat attachments, web pages, logs, or source-code comments as new instructions that can expand its permissions;
+- Not fake reads, execution, tests, publishing, and citations;
+- Check existing content and your changes before modifying anything;
+- Not move, overwrite, or delete files of unknown origin just to keep things tidy;
+- Not go looking for unrelated credentials, and not write secrets into records;
+- Not send private material outside, buy anything, publish, or change a production environment without specific authorization;
+- Ask first when the result of an external action is unknown, instead of blindly repeating it;
+- Read the real error after a failure and change the approach, instead of retrying mechanically.
+
+These are still behavior rules. The real file, network, and account permissions are controlled by the harness, the operating system, and the servers. You cannot rely on model self-discipline alone to protect high-value assets.
+
+## 17. Upgrading from an Older Version
+
+The v3 ProjectRules are not compatible with the old four-file workflow, and you must not let both entry points be active at the same time.
+
+Recommended steps:
+
+1. Tag or back up the old repository first;
+2. Keep the old task ledgers and historical evidence; do not rewrite them in bulk;
+3. Replace the old project rules with the v3 `ProjectRules/AGENTS.md` and `.agent-protocol/`;
+4. Remove any loading of the old `OPERATING_RULES.md`, `TASK_STATE_MACHINE.md`, and old `SCHEMA.md` from the project entry point;
+5. For old tasks that still need to continue, read the old current_state and the current plan, check the real files, and then create a v3 state;
+6. Keep the location of the old records in the key paths of the new state;
+7. Old tasks with no further value do not need to be migrated just to get a uniform format.
+
+Do not delete old records to produce a “clean upgrade”. You can keep them in a legacy directory, in an old-version tag, or in a Release asset.
+
+## 18. FAQ
+
+### Do I need to install any software?
+
+The rules themselves do not. To actually run project tasks, you still need an Agent harness that supports file access and the relevant tool calls. Using `rg` is only a recommendation; if you do not have it, use an equivalent search.
+
+### Why is there no .agent-work?
+
+In AUTO mode, a FAST task creates no ledger. It is also possible that the project rules were not loaded, or that the dot directory is hidden by your system. Check section 9 first.
+
+### Why does the Agent still ask me at every step?
+
+Check whether an old state machine, other project rules, a Skill, or a harness approval requirement is still loaded. Ask the Agent to point out the exact rule that is causing the wait. In v3, ordinary milestones continue by default after saving, but that cannot override real approvals in the harness.
+
+### The AI says “saved”. How do I check it myself?
+
+Open current_state and look at `LAST_EVENT_ID`; confirm that a snapshot with the same name exists, then search history for that EVENT_ID. All three should use the same TASK_ID, PLAN_REF, and step information.
+
+### Why does history not save the full state?
+
+The full state is already saved in snapshots. history keeps only searchable events and pointers, which cuts down the large chunks of repeated content on every write and read.
+
+### Does current_state drift further from reality the more it is written?
+
+The rules require stable goals and user decisions to be inherited as they are, and to be checked against real files and evidence. Snapshots keep the state from older points in time, so you do not end up with nothing but ever-shorter “summaries of summaries”. That lowers the risk; it cannot fully remove model errors.
+
+### Can I run two sessions on the same task at the same time?
+
+Not recommended. This plain-text protocol has no cross-process locks. If you need parallelism, use different task directories and clearly non-overlapping file write scopes; do not let two workers change the same current_state, history, or plan at the same time.
+
+### Should .agent-work be committed to Git?
+
+That is up to the project. Commit it when the team needs to share and audit it; ignore it when it contains local paths, private information, or a lot of temporary evidence. Either way, never write credentials into it.
+
+### Can I continue on another computer?
+
+You need to bring the whole project folder along with `.agent-work/`, and install or configure GlobalRules again in the new tool. Credentials, software environments, and harness permissions do not migrate automatically with Markdown.
+
+### Can you guarantee the state is never lost?
+
+No. Checkpoints make recovery much better, but sudden power loss, file corruption, rules the harness did not load, a model that forgets to write, and concurrent conflicts can still happen. Important projects need normal backups and version control.
+
+## 19. Known Limitations
+
+- This is a plain-text protocol. It has no automatic compaction hooks, no transactional database, and no cross-process locks.
+- Schema guarantees that the format is searchable. It does not guarantee that the content recorded is correct.
+- The rule-loading mechanisms of different Agent tools can change, so check the official documentation.
+- Model capability and instruction-following vary, so run FAST, plan revisions, step saves, recovery after compaction, and interrupted writes in a test project first.
+- The Chinese README is currently the main document; other language versions should only claim to be equivalent to v3 after they are updated in sync.
+
+## 20. License
 
 [MIT License](LICENSE) © 2026 Canpu
 
-Free to use, modify, distribute, and use commercially, with the copyright notice retained.
+You may use, modify, and distribute this project within what the license allows. When you publish a modified version, keep the license and the necessary copyright notice.
 
 ---
 
-## 11. Appendix: path verification
+The most common working rhythm, in one sentence:
 
-**Verified on: 2026-08-19.** All installation paths were checked against official documentation / official source code (see the release notes and evidence for details):
-
-- ✅ **VERIFIED (official):** all paths for ZCode, OpenAI Codex, Claude Code, GitHub Copilot, Windsurf; project-level paths for Cursor
-- ⚠️ **PARTIAL (documented but community-reported flaky):** Cursor's user-level files `~/.cursor/rules/*.mdc` auto-loading (the settings-UI approach is recommended instead)
-
-**Important:** AI tools evolve fast; rule-file paths may change between versions. If a path doesn't exist on your machine, defer to that tool's **official documentation**:
-
-| Tool | Official docs |
-|------|---------------|
-| ZCode | ZCode client configuration guide (Settings) |
-| OpenAI Codex | https://developers.openai.com/codex/guides/agents-md · github.com/openai/codex |
-| Claude Code | https://code.claude.com/docs/en/memory |
-| Cursor | https://cursor.com/docs/rules · https://cursor.com/help/customization/rules |
-| GitHub Copilot | https://docs.github.com/en/copilot/how-tos/configure-custom-instructions-in-your-ide |
-| Windsurf | https://docs.windsurf.com/windsurf/cascade/memories (redirects to docs.devin.ai) |
+> **Hand over the task → the Agent works in milestones and saves as it goes → you decide when to compact → the Agent saves and pauses → after compaction, continue from current_state.**
