@@ -165,10 +165,10 @@ def validate_sources(root: Path = ROOT) -> list[str]:
     errors = []
     version = build_release.read_version(root)
     for name in ("README.md", "README_EN.md", "CHANGELOG.md"):
-        if f"4.0.0" not in (root / name).read_text(encoding="utf-8"):
-            errors.append(f"{name} does not identify v4.0.0")
-    if version != "4.0.0":
-        errors.append(f"expected v4.0.0, found {version}")
+        if f"4.0.1" not in (root / name).read_text(encoding="utf-8"):
+            errors.append(f"{name} does not identify v4.0.1")
+    if version != "4.0.1":
+        errors.append(f"expected v4.0.1, found {version}")
     rules = {p.name for p in (root / "ProjectRules/.agent-protocol/rules").glob("*.md")}
     templates = {p.name for p in (root / "ProjectRules/.agent-protocol/templates").glob("*.md")}
     if rules != EXPECTED_RULES:

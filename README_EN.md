@@ -1,6 +1,6 @@
 # Portable Agent Project Operating Protocol
 
-PAPOP · **v4.0.0**
+PAPOP · **v4.0.1**
 
 A Markdown-only protocol for tool-using agents: behavior boundaries, execution authority, milestone checkpoints, and recovery after compaction or interruption. It requires no database, background service, or particular model.
 
@@ -8,15 +8,15 @@ Project home: [github.com/canpus/portable-agent-project-operating-protocol](http
 
 **v4 has three distribution packages. Plan Approval and Task Delegation are peer governance choices sharing one state and recovery core.**
 
-[中文](README.md) · [Installation and daily use](docs/INSTALL.md) · [Migration and switching](docs/MIGRATION.md) · [Changelog](CHANGELOG.md) · [Behavior checks](docs/BEHAVIOR_CHECKS.md)
+[中文](README.md) · [Why It Is Designed This Way](docs/WHY_EN.md) · [Installation and daily use](docs/INSTALL.md) · [Migration and switching](docs/MIGRATION.md) · [Changelog](CHANGELOG.md) · [Behavior checks](docs/BEHAVIOR_CHECKS.md)
 
 ## Choose one package
 
 | ZIP | Intended use | Default behavior |
 |---|---|---|
-| `portable-agent-project-operating-protocol-v4.0.0-global-rules-only.zip` | Behavior constraints without a state machine | GlobalRules only; no PAPOP task ledger |
-| `portable-agent-project-operating-protocol-v4.0.0-plan-approval.zip` | Human review of the execution plan and delivery | Confirm requirements → approve exact revision → execute → human acceptance → close |
-| `portable-agent-project-operating-protocol-v4.0.0-task-delegation.zip` | Continuous execution after delegating a goal | Proceed within task authority; wait for missing decisions, specific authorization, or user-defined gates |
+| `portable-agent-project-operating-protocol-v4.0.1-global-rules-only.zip` | Behavior constraints without a state machine | GlobalRules only; no PAPOP task ledger |
+| `portable-agent-project-operating-protocol-v4.0.1-plan-approval.zip` | Human review of the execution plan and delivery | Confirm requirements → approve exact revision → execute → human acceptance → close |
+| `portable-agent-project-operating-protocol-v4.0.1-task-delegation.zip` | Continuous execution after delegating a goal | Proceed within task authority; wait for missing decisions, specific authorization, or user-defined gates |
 
 GlobalRules is byte-identical in all three packages. Each project package contains one generated `ProjectRules/AGENTS.md` and the same `.agent-protocol/` directory. Install only one project entry. Pure questions and discussions create no task records.
 

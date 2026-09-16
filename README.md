@@ -1,6 +1,6 @@
 # Portable Agent Project Operating Protocol
 
-便携 Agent 项目运行协议（PAPOP） · **v4.0.0**
+便携 Agent 项目运行协议（PAPOP） · **v4.0.1**
 
 一套纯 Markdown 协议，为能读写文件、调用工具的 Agent 定义行为边界、执行授权、状态保存和压缩后的恢复方法。不需要数据库、后台服务或固定模型。
 
@@ -8,15 +8,15 @@
 
 **v4 提供三种分发包。计划审批和任务委托是并列的治理选择，共用状态与恢复机制。**
 
-[English](README_EN.md) · [安装与日常使用](docs/INSTALL.md) · [迁移与切换](docs/MIGRATION.md) · [更新记录](CHANGELOG.md) · [行为验收场景](docs/BEHAVIOR_CHECKS.md)
+[English](README_EN.md) · [为什么这样设计](docs/WHY.md) · [安装与日常使用](docs/INSTALL.md) · [迁移与切换](docs/MIGRATION.md) · [更新记录](CHANGELOG.md) · [行为验收场景](docs/BEHAVIOR_CHECKS.md)
 
 ## 选择一个包
 
 | 压缩包 | 适合谁 | 默认行为 |
 |---|---|---|
-| `portable-agent-project-operating-protocol-v4.0.0-global-rules-only.zip` | 只想约束模型行为，不需要状态机 | 只有 GlobalRules，不创建本协议账本 |
-| `portable-agent-project-operating-protocol-v4.0.0-plan-approval.zip` | 希望执行路线由人类先审阅、交付由人类验收 | 确认需求 → 批准精确计划 → 执行 → 人工验收 → 关闭 |
-| `portable-agent-project-operating-protocol-v4.0.0-task-delegation.zip` | 希望委托目标后由 Agent 持续推进 | 在任务授权范围内执行，缺关键决定/具体授权或遇用户关卡时等待 |
+| `portable-agent-project-operating-protocol-v4.0.1-global-rules-only.zip` | 只想约束模型行为，不需要状态机 | 只有 GlobalRules，不创建本协议账本 |
+| `portable-agent-project-operating-protocol-v4.0.1-plan-approval.zip` | 希望执行路线由人类先审阅、交付由人类验收 | 确认需求 → 批准精确计划 → 执行 → 人工验收 → 关闭 |
+| `portable-agent-project-operating-protocol-v4.0.1-task-delegation.zip` | 希望委托目标后由 Agent 持续推进 | 在任务授权范围内执行，缺关键决定/具体授权或遇用户关卡时等待 |
 
 三个包包含完全相同的 GlobalRules。两个状态机包各包含一个生成好的 `ProjectRules/AGENTS.md` 和相同的 `.agent-protocol/`，安装时只选择一个。普通问答和纯讨论不创建任务记录。
 

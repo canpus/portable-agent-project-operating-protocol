@@ -3,7 +3,7 @@
 ## 0. 入口、路径与配置
 
 - 本文件适用于其所在目录及子目录；`PROJECT_ROOT` 即本文件所在目录。
-- `PROTOCOL_VERSION: 4.0.0`
+- `PROTOCOL_VERSION: 4.0.1`
 - `GOVERNANCE_MODE: @@GOVERNANCE_MODE@@`
 - `RECORD_MODE: @@RECORD_MODE@@`
 - GOVERNANCE_MODE 只允许 `PLAN_APPROVAL / TASK_DELEGATION`，决定执行授权和关闭关卡；RECORD_MODE 只允许 `AUTO / TRACKED`，决定是否记录。两者不能互相替代。

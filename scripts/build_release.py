@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMMON_FILES = (
     "README.md", "README_EN.md", "LICENSE", "VERSION", "CHANGELOG.md",
     "docs/INSTALL.md", "docs/MIGRATION.md", "docs/BEHAVIOR_CHECKS.md",
+    "docs/WHY.md", "docs/WHY_EN.md",
     "GlobalRules/AGENTS.md",
 )
 PROFILE_IDS = ("plan-approval", "task-delegation")
