@@ -1,0 +1,6 @@
+{
+  "id": "plan-approval",
+  "name": "计划审批模式 / Plan Approval",
+  "governance_mode": "PLAN_APPROVAL",
+  "record_mode": "TRACKED"
+}
