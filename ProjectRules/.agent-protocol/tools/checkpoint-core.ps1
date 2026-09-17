@@ -113,9 +113,15 @@ function Require-Record([string]$Path,[string]$Field,[string]$Ref) {
 }
 function Decision-Allows([string]$Path,[string]$Ref,[string[]]$Kinds,[string]$Target) {
   if($Ref -eq 'NONE'){return $false}; $text=$Utf8.GetString((Read-Bytes $Path))
-  $block=[regex]::Match($text,'(?ms)^<!-- DECISION_BEGIN -->\n.*?^DECISION_ID: '+[regex]::Escape($Ref)+'\n.*?^<!-- DECISION_END -->')
-  if(-not $block.Success){return $false}; $f=Parse-Fields (Bytes $block.Value)
-  return ($Kinds -contains $f['DECISION_TYPE'] -and $f['TARGET_REF'] -eq $Target -and $f['SOURCE'] -eq 'USER_MESSAGE')
+  # Match per block: one leading DECISION_BEGIN would bind every Ref to the first block.
+  foreach($block in [regex]::Matches($text,'(?ms)^<!-- DECISION_BEGIN -->\n.*?^<!-- DECISION_END -->')){
+    $b=$block.Value
+    if($b -notmatch ('DECISION_ID: '+[regex]::Escape($Ref)+'\n')){continue}
+    if($b -notmatch ('TARGET_REF: '+[regex]::Escape($Target)+'\n')){continue}
+    if($b -notmatch ('SOURCE: USER_MESSAGE\n')){continue}
+    foreach($kind in $Kinds){if($b -match ('DECISION_TYPE: '+[regex]::Escape($kind)+'\n')){return $true}}
+  }
+  return $false
 }
 function Require-Decision([string]$Path,[string]$Ref,[string[]]$Kinds,[string]$Target) {
   if(-not(Decision-Allows $Path $Ref $Kinds $Target)){Fail "Decision $Ref does not authorize $Target"}

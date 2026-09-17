@@ -4,6 +4,12 @@
 
 版本格式参考 [Semantic Versioning](https://semver.org/)。v3 的项目规则结构和任务记录格式与旧版不兼容，因此使用新的主版本号。
 
+## 未发布
+
+- 修复 Windows PowerShell 版检查点工具的决策校验缺陷：`Decision-Allows` 此前以单个前导 `DECISION_BEGIN` 匹配决策块，导致每个 Ref 都被解析到 `decisions.md` 的首个 Decision 块，第二个及之后的用户决策无法授权任何关卡，严格模式在需求确认之后无法推进；现改为逐块匹配，与 POSIX Shell 实现语义一致（受影响文件：`ProjectRules/.agent-protocol/tools/checkpoint-core.ps1`；影响 v5.0.0 及此前携带该工具的发布包）。
+- 该修复不引入 UTF-8 BOM：Windows PowerShell 5.1 在脚本无 BOM 时按 ANSI 码页解码，脚本内出现非 ASCII 字符会引发 ParserError，因此工具脚本保持纯 ASCII。
+- 本地验证：同一组 11 项探针在 `.ps1` 与 `.sh` 两个实现上逐项一致，伪造引用与错目标仍被拒绝；`tests/test_release.py` 13 项全通过（含需 `PAPOP_WINDOWS_INTEGRATION=1` 的 3 项 Windows 集成测试）。
+
 ## 5.0.0 - 2026-09-17
 
 - 层级重构为全局 → 工作区 → Task（Project）；Task、Session、Stage 身份分离。
