@@ -9,8 +9,10 @@
 *.sh text eol=lf
 *.ps1 text eol=lf
 *.txt text eol=lf
+*.mmd text eol=lf
 .gitattributes text eol=lf
 .editorconfig text eol=lf
+.gitignore text eol=lf
 LICENSE text eol=lf
 VERSION text eol=lf
 

@@ -133,6 +133,10 @@ class Packaging(unittest.TestCase):
             a=build_release.zip_bytes(entries);self.assertEqual(a,build_release.zip_bytes(entries))
             with zipfile.ZipFile(io.BytesIO(a)) as z:m={n:z.read(n) for n in z.namelist()}
             manifest=json.loads(m["MANIFEST.json"]);self.assertEqual(manifest["files"],{n:build_release.sha256(d) for n,d in sorted(m.items()) if n!="MANIFEST.json"})
+    def test_byte_policy_covers_mmd_and_gitignore(self):
+        self.assertEqual([],validate_release.byte_errors("docs/diagrams/x.mmd",b"a\nb\n"));self.assertNotEqual([],validate_release.byte_errors("docs/diagrams/x.mmd",b"a\r\nb\r\n"))
+        self.assertEqual([],validate_release.byte_errors(".gitignore",b"a\n"));self.assertNotEqual([],validate_release.byte_errors(".gitignore",b"a\r\n"))
+        self.assertNotEqual([],validate_release.byte_errors("docs/diagrams/x.mmd",b"a\r\nb")) # 末尾 CR 亦须报错
     def test_dist(self):
         with tempfile.TemporaryDirectory() as d:build_release.build(output=Path(d));self.assertEqual([],validate_release.validate_dist(dist=Path(d)))
 
@@ -173,6 +177,16 @@ class PowerShellTools(unittest.TestCase):
         mismatched=with_fields(state(self.task.name,3,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0003",REQUIREMENTS_DECISION_REF="D-000002")
         candidate.write_bytes(mismatched);r=run_ps(CHECKPOINT,"commit","--task-root",self.task,"--next-state",candidate,ok=False)
         self.assertNotEqual(0,r.returncode);self.assertEqual(confirmed,(self.ledger/"current_state.md").read_bytes())
+    def test_task_authorization_target_matches_literally(self):
+        # Task 目录名允许 . 与 + 等正则元字符；target 若按正则匹配会放宽判定，只差一字符的决策也会被接受。
+        dotted=self.tasks/"task1_20260917_a.b";run_ps(CHECKPOINT,"init","--task-root",dotted,"--mode","AUTONOMOUS");ledger=dotted/".agent-state"
+        first=with_fields(state(dotted.name),GOVERNANCE_MODE="AUTONOMOUS");candidate=self.txn/"one.md";candidate.write_bytes(first);run_ps(CHECKPOINT,"commit","--task-root",dotted,"--next-state",candidate)
+        gated=with_fields(state(dotted.name,2,phase="IMPLEMENTATION"),GOVERNANCE_MODE="AUTONOMOUS",TASK_AUTHORIZATION_REF="D-000001")
+        (ledger/"decisions.md").write_bytes(decision_sectioned(dotted.name,"D-000001","TASK_AUTHORIZED","task1_20260917_axb"))
+        candidate=self.txn/"two.md";candidate.write_bytes(gated);r=run_ps(CHECKPOINT,"commit","--task-root",dotted,"--next-state",candidate,ok=False)
+        self.assertNotEqual(0,r.returncode);self.assertEqual(first,(ledger/"current_state.md").read_bytes())
+        (ledger/"decisions.md").write_bytes(decision_sectioned(dotted.name,"D-000001","TASK_AUTHORIZED",dotted.name))
+        candidate.write_bytes(gated);run_ps(CHECKPOINT,"commit","--task-root",dotted,"--next-state",candidate);self.assertEqual(gated,(ledger/"current_state.md").read_bytes())
     def test_partial_current_recovery(self):
         self.commit(state(self.task.name),"one.md");second=state(self.task.name,2);(self.ledger/"current_state.md").write_bytes(second);self.commit(second,"two.md");self.assertEqual(2,(self.ledger/"history.md").read_text().count("<!-- HISTORY_ENTRY_BEGIN -->"))
     def test_invalid_transition_does_not_replace_current(self):
@@ -202,6 +216,16 @@ class PosixTools(unittest.TestCase):
             forged=with_fields(state(task.name,3,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0002",REQUIREMENTS_DECISION_REF="D-000009")
             candidate.write_bytes(forged);r=run_sh(CHECKPOINT_SH,"commit","--task-root",task,"--next-state",candidate,ok=False)
             self.assertNotEqual(0,r.returncode);self.assertEqual(confirmed,(ledger/"current_state.md").read_bytes())
+    def test_posix_task_authorization_target_matches_literally(self):
+        with tempfile.TemporaryDirectory() as d:
+            workspace=Path(d)/"workspace";dotted=workspace/"tasks/task1_20260917_a.b";dotted.parent.mkdir(parents=True);run_sh(CHECKPOINT_SH,"init","--task-root",dotted,"--mode","AUTONOMOUS");ledger=dotted/".agent-state"
+            first=with_fields(state(dotted.name),GOVERNANCE_MODE="AUTONOMOUS");candidate=workspace/".agent-work/.txn/one.md";candidate.write_bytes(first);run_sh(CHECKPOINT_SH,"commit","--task-root",dotted,"--next-state",candidate)
+            gated=with_fields(state(dotted.name,2,phase="IMPLEMENTATION"),GOVERNANCE_MODE="AUTONOMOUS",TASK_AUTHORIZATION_REF="D-000001")
+            (ledger/"decisions.md").write_bytes(decision_sectioned(dotted.name,"D-000001","TASK_AUTHORIZED","task1_20260917_axb"))
+            candidate.write_bytes(gated);r=run_sh(CHECKPOINT_SH,"commit","--task-root",dotted,"--next-state",candidate,ok=False)
+            self.assertNotEqual(0,r.returncode);self.assertEqual(first,(ledger/"current_state.md").read_bytes())
+            (ledger/"decisions.md").write_bytes(decision_sectioned(dotted.name,"D-000001","TASK_AUTHORIZED",dotted.name))
+            candidate.write_bytes(gated);run_sh(CHECKPOINT_SH,"commit","--task-root",dotted,"--next-state",candidate);self.assertEqual(gated,(ledger/"current_state.md").read_bytes())
     def test_posix_intake(self):
         with tempfile.TemporaryDirectory() as d:
             workspace=Path(d)/"workspace";task=workspace/"tasks/task1_20260917_fixture";task.parent.mkdir(parents=True);run_sh(CHECKPOINT_SH,"init","--task-root",task,"--mode","AUTONOMOUS")

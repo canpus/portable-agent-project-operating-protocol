@@ -60,9 +60,10 @@ require_field() { value=$(field "$1" "$2"); [ -n "$value" ] || fail "missing fie
 require_ref() { [ "$3" = NONE ] && return 0; grep -Fqx "$2: $3" "$1" || fail "missing $2: $3"; }
 decision_matches() {
   file=$1 id=$2 kinds=$3 target=$4; [ "$id" != NONE ] || fail "missing decision for $target"
+  # index() keeps id/target/kind as literals, matching checkpoint-core.ps1's escaped regexes.
   awk -v id="$id" -v kinds="$kinds" -v target="$target" '
     /^<!-- DECISION_BEGIN -->/{b="";on=1} on{b=b $0 "\n"} /^<!-- DECISION_END -->/{
-      if(b ~ ("DECISION_ID: " id "\n") && b ~ ("TARGET_REF: " target "\n") && b ~ /SOURCE: USER_MESSAGE\n/){n=split(kinds,a,"|");for(i=1;i<=n;i++)if(b ~ ("DECISION_TYPE: " a[i] "\n"))ok=1} on=0
+      if(index(b,"DECISION_ID: " id "\n") && index(b,"TARGET_REF: " target "\n") && index(b,"SOURCE: USER_MESSAGE\n")){n=split(kinds,a,"|");for(i=1;i<=n;i++)if(index(b,"DECISION_TYPE: " a[i] "\n"))ok=1} on=0
     } END{exit ok?0:1}' "$file"
 }
 decision_ok() {

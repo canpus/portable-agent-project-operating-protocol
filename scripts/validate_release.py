@@ -20,7 +20,7 @@ def byte_errors(name:str,data:bytes)->list[str]:
     if name.endswith((".cmd",".bat")):
         if data.replace(b"\r\n",b"").find(b"\n")>=0 or data.replace(b"\r\n",b"").find(b"\r")>=0: out.append(f"{name}: CMD must use CRLF only")
         if data and not data.endswith(b"\r\n"): out.append(f"{name}: missing CRLF at EOF")
-    elif name.endswith((".md",".json",".toml",".yml",".yaml",".py",".sh",".ps1",".txt")) or Path(name).name in {"LICENSE","VERSION",".gitattributes",".editorconfig"}:
+    elif name.endswith((".md",".json",".toml",".yml",".yaml",".py",".sh",".ps1",".txt",".mmd")) or Path(name).name in {"LICENSE","VERSION",".gitattributes",".editorconfig",".gitignore"}:
         if b"\r" in data: out.append(f"{name}: LF text contains CR")
         if data and not data.endswith(b"\n"): out.append(f"{name}: missing LF at EOF")
     if name.endswith((".ps1",".cmd")):

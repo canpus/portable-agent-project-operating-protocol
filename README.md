@@ -1,4 +1,4 @@
-# Portable Agent Project Operating Protocol v5.0.1
+# Portable Agent Project Operating Protocol v5.0.2
 
 [English](README_EN.md) · [为什么要用状态机](docs/WHY.md) · [状态机怎样工作](docs/HOW.md) · [安装指南](docs/INSTALL.md) · [从旧版迁移](docs/MIGRATION.md)
 

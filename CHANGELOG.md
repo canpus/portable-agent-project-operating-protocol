@@ -4,6 +4,13 @@
 
 版本格式参考 [Semantic Versioning](https://semver.org/)。v3 的项目规则结构和任务记录格式与旧版不兼容，因此使用新的主版本号。
 
+## 5.0.2 - 2026-09-17
+
+- 修复构建产物的行尾依赖：`.gitattributes` 为 `*.mmd` 与 `.gitignore` 补上 `text eol=lf`。此前 `.mmd` 未指定 eol，在 `core.eol=native`（Windows 默认 CRLF）的机器上会被检出为 CRLF，而构建脚本直接读取工作树字节，导致发布包内该文件带 CRLF。
+- 修复发布校验盲区：`validate_release.py` 的 `byte_errors` 现覆盖 `.mmd` 与 `.gitignore`，同类行尾污染将由项目自带校验拦截，不再依赖人工逐文件比对发现。
+- 修复两实现的决策校验不一致：`checkpoint.sh` 的 `decision_matches` 改用字面匹配，与 `checkpoint-core.ps1` 的转义语义对齐。此前 `.sh` 把决策目标当正则使用，当 Task 目录名含 `.` 或 `+` 等元字符时（AUTONOMOUS 模式的任务授权关卡），目标仅差一个字符的决策也会被接受，即校验被放宽。
+- 新增回归用例：字节策略对 `.mmd` 与 `.gitignore` 中的 CR 必须报错；含元字符的 Task 名配合仅差一字符的决策目标时，两个实现均须拒绝。POSIX 侧用例以 v5.0.0 的 `checkpoint.sh` 做过 A/B 对照，确认其在修复前失败、修复后通过。
+
 ## 5.0.1 - 2026-09-17
 
 - 修复 Windows PowerShell 版检查点工具的决策校验缺陷：`Decision-Allows` 此前以单个前导 `DECISION_BEGIN` 匹配决策块，导致每个 Ref 都被解析到 `decisions.md` 的首个 Decision 块，第二个及之后的用户决策无法授权任何关卡，严格模式在需求确认之后无法推进；现改为逐块匹配，与 POSIX Shell 实现语义一致（受影响文件：`ProjectRules/.agent-protocol/tools/checkpoint-core.ps1`；影响 v5.0.0 及此前携带该工具的发布包）。
