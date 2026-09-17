@@ -118,6 +118,13 @@ SUBJECT: fixture
 <!-- DECISION_END -->
 """.encode()
 
+def decision_sectioned(task:str,decision_id:str,kind:str,target:str)->bytes:
+    # 真实 decisions.md 的块在字段之后带井号标题区段；解析器在该处停止读取字段。
+    return decision(task,decision_id,kind,target).replace(b"<!-- DECISION_END -->",b"## fixture\n\nfixture\n<!-- DECISION_END -->")
+
+def two_decisions(task:str,first:tuple[str,str,str],second:tuple[str,str,str])->bytes:
+    return b"\n".join(decision_sectioned(task,*item) for item in (first,second))
+
 class Packaging(unittest.TestCase):
     def test_sources(self): self.assertEqual([],validate_release.validate_sources())
     def test_three_packages(self):
@@ -155,6 +162,17 @@ class PowerShellTools(unittest.TestCase):
         first=state(self.task.name);self.commit(first,"one.md");second=with_fields(state(self.task.name,2),GOVERNANCE_MODE="AUTONOMOUS",RELATED_DECISION_REFS="D-000001")
         candidate=self.txn/"two.md";candidate.write_bytes(second);result=run_ps(CHECKPOINT,"commit","--task-root",self.task,"--next-state",candidate,ok=False);self.assertIn("mode switch lacks approval",result.stderr);self.assertEqual(first,(self.ledger/"current_state.md").read_bytes())
         (self.ledger/"decisions.md").write_bytes(decision(self.task.name,"D-000001","MODE_SWITCH_APPROVED","GOVERNANCE_MODE:STRICT_APPROVAL->AUTONOMOUS"));candidate.write_bytes(second);self.commit(second,"two.md");self.assertEqual(second,(self.ledger/"current_state.md").read_bytes())
+    def test_second_decision_block_authorizes_its_target(self):
+        self.commit(state(self.task.name),"one.md")
+        confirmed=with_fields(state(self.task.name,2,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0002",REQUIREMENTS_DECISION_REF="D-000002")
+        (self.ledger/"decisions.md").write_bytes(two_decisions(self.task.name,("D-000001","REQUIREMENTS_CONFIRMED","REQ-0001"),("D-000002","REQUIREMENTS_CONFIRMED","REQ-0002")))
+        self.commit(confirmed,"two.md");self.assertEqual(confirmed,(self.ledger/"current_state.md").read_bytes())
+        forged=with_fields(state(self.task.name,3,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0002",REQUIREMENTS_DECISION_REF="D-000009")
+        candidate=self.txn/"three.md";candidate.write_bytes(forged);r=run_ps(CHECKPOINT,"commit","--task-root",self.task,"--next-state",candidate,ok=False)
+        self.assertNotEqual(0,r.returncode);self.assertEqual(confirmed,(self.ledger/"current_state.md").read_bytes())
+        mismatched=with_fields(state(self.task.name,3,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0003",REQUIREMENTS_DECISION_REF="D-000002")
+        candidate.write_bytes(mismatched);r=run_ps(CHECKPOINT,"commit","--task-root",self.task,"--next-state",candidate,ok=False)
+        self.assertNotEqual(0,r.returncode);self.assertEqual(confirmed,(self.ledger/"current_state.md").read_bytes())
     def test_partial_current_recovery(self):
         self.commit(state(self.task.name),"one.md");second=state(self.task.name,2);(self.ledger/"current_state.md").write_bytes(second);self.commit(second,"two.md");self.assertEqual(2,(self.ledger/"history.md").read_text().count("<!-- HISTORY_ENTRY_BEGIN -->"))
     def test_invalid_transition_does_not_replace_current(self):
@@ -174,6 +192,16 @@ class PosixTools(unittest.TestCase):
                 roots.append(task/".agent-state")
             for name in ("current_state.md","snapshots.md","history.md"):
                 self.assertEqual((roots[0]/name).read_bytes(),(roots[1]/name).read_bytes(),name)
+    def test_posix_second_decision_block_authorizes_its_target(self):
+        with tempfile.TemporaryDirectory() as d:
+            workspace=Path(d)/"workspace";task=workspace/"tasks/task1_20260917_中文任务";task.parent.mkdir(parents=True);run_sh(CHECKPOINT_SH,"init","--task-root",task,"--mode","STRICT_APPROVAL");ledger=task/".agent-state"
+            candidate=workspace/".agent-work/.txn/one.md";candidate.write_bytes(state(task.name));run_sh(CHECKPOINT_SH,"commit","--task-root",task,"--next-state",candidate)
+            (ledger/"decisions.md").write_bytes(two_decisions(task.name,("D-000001","REQUIREMENTS_CONFIRMED","REQ-0001"),("D-000002","REQUIREMENTS_CONFIRMED","REQ-0002")))
+            confirmed=with_fields(state(task.name,2,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0002",REQUIREMENTS_DECISION_REF="D-000002")
+            candidate.write_bytes(confirmed);run_sh(CHECKPOINT_SH,"commit","--task-root",task,"--next-state",candidate);self.assertEqual(confirmed,(ledger/"current_state.md").read_bytes())
+            forged=with_fields(state(task.name,3,phase="GOAL_DRAFTING"),REQUIREMENTS_REF="REQ-0002",REQUIREMENTS_DECISION_REF="D-000009")
+            candidate.write_bytes(forged);r=run_sh(CHECKPOINT_SH,"commit","--task-root",task,"--next-state",candidate,ok=False)
+            self.assertNotEqual(0,r.returncode);self.assertEqual(confirmed,(ledger/"current_state.md").read_bytes())
     def test_posix_intake(self):
         with tempfile.TemporaryDirectory() as d:
             workspace=Path(d)/"workspace";task=workspace/"tasks/task1_20260917_fixture";task.parent.mkdir(parents=True);run_sh(CHECKPOINT_SH,"init","--task-root",task,"--mode","AUTONOMOUS")
