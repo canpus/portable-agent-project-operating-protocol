@@ -1,95 +1,96 @@
-# AGENTS.md — PAPOP v4 项目执行与状态入口
+# AGENTS.md — PAPOP v5 工作区状态机入口
 
-## 0. 入口、路径与配置
+PROTOCOL_VERSION: 5.0.0
+WORKSPACE_GOVERNANCE_MODE: @@GOVERNANCE_MODE@@
 
-- 本文件适用于其所在目录及子目录；`PROJECT_ROOT` 即本文件所在目录。
-- `PROTOCOL_VERSION: 4.0.1`
-- `GOVERNANCE_MODE: @@GOVERNANCE_MODE@@`
-- `RECORD_MODE: @@RECORD_MODE@@`
-- GOVERNANCE_MODE 只允许 `PLAN_APPROVAL / TASK_DELEGATION`，决定执行授权和关闭关卡；RECORD_MODE 只允许 `AUTO / TRACKED`，决定是否记录。两者不能互相替代。
-- PLAN_APPROVAL 的实际任务必须 TRACKED，即使只修改一个文件；纯问答和不改变项目的讨论不建账、不进入审批流程。
-- 本文件是唯一项目入口。详细规则在 `.agent-protocol/rules/`，契约在 `.agent-protocol/SCHEMA.md`，模板在 `.agent-protocol/templates/`。状态只写入 `<PROJECT_ROOT>/.agent-work/`，不搬动源码、输入、证据或交付物。
-- 首次加载时读取本节、会话入口和当前模式对应的治理规则；不要预读整个规则库、Schema、历史或旧计划。
-- 配置缺失、未替换、非法，或 PLAN_APPROVAL 配成 AUTO 时，不自行选择宽松模式。保持只读调查，指出具体配置问题。
+## 0. 层级与身份
 
-## 1. 会话入口
+- 层级固定为：全局规则 → 工作区 → Task（Project）。本文件位于 `WORKSPACE_ROOT`，决定此工作区中新 Task 的默认治理模式。
+- Task 就是 Project，目录为 `tasks/task<N>_YYYYMMDD_<任务名>/`；同一项目跨多次对话始终复用同一 Task。
+- `TASK_ID` 在目录创建后不变；每次新对话/恢复分配 `SESSION_ID`；每个“计划—施工—交付—验收”周期分配 `STAGE_ID`。
+- Task 创建时把工作区模式冻结到 `current_state.md`。修改本文件只影响新 Task；既有 Task 切换模式需要用户明确决定和迁移检查点。
+- 纯讨论不自动创建 Task。用户确认开始项目，或第一个人工审查点即将发生时，创建/选择 Task。
 
-1. 理解用户当前目标。先读取当前模式的治理规则：PLAN_APPROVAL → `.agent-protocol/rules/plan-approval.md`；TASK_DELEGATION → `.agent-protocol/rules/task-delegation.md`。只加载当前模式。
-2. 独立新目标按记录模式判定处理；新会话不自动等于新任务，旧任务也不自动吸收无关目标。
-3. 用户说“继续、恢复、压缩后继续”或给出状态路径时，按 recovery.md 恢复。明确任务 ID 或路径不需要双次确认；只有多个候选无法区分才询问。
-4. 用户要求保存或准备压缩时，按 checkpoint.md 保存真实进度，核验后停止新工作；用户明确要求“保存后继续”时，仍需先通过当前治理关卡。
-5. 状态记录的 GOVERNANCE_MODE 必须与项目配置一致。发现冲突不自行重置状态或降级审批；按 governance.md 核对用户决定。
-6. 纯问答、规则安装检查和讨论不建立任务账本。不要因为查看规则、验证配置就进入计划审批。
+## 1. 工作区与 Task 结构
 
-## 2. 记录模式
+```text
+<WORKSPACE_ROOT>/
+├── AGENTS.md
+├── .agent-protocol/                 # 规则、模板、跨平台工具
+├── .agent-work/                     # 临时事务与锁；默认忽略
+│   ├── .txn/
+│   └── locks/
+├── .agent-cases/                    # 用户批准升格的工作区 Case
+│   ├── index.md
+│   └── WC-0001.md
+├── tasks/
+│   └── task1_YYYYMMDD_<任务名>/     # Task 即 Project
+│       ├── .agent-state/            # 默认忽略
+│       │   ├── goal.md              # append-only
+│       │   ├── plan.md              # append-only
+│       │   ├── decisions.md         # append-only
+│       │   ├── history.md           # append-only，检索索引
+│       │   ├── current_state.md      # 唯一可覆写的核心账本
+│       │   ├── snapshots.md          # append-only，单文件增长
+│       │   └── cases/
+│       │       ├── index.md         # 短摘要与触发场景
+│       │       └── C-0001.md        # 触发匹配时才读取
+│       ├── UserInput/               # 独立文件导入流程产生的只读原件
+│       ├── .gitignore
+│       └── <项目文件>
+└── .gitignore
+```
 
-### TRACKED
+- `.agent-state/` 只允许六个核心账本和 `cases/`；不得创建多快照目录、逐快照文件、`current_state.prev`、活动索引或项目级共享状态。
+- 工作区 `.gitignore` 最小加入 `.agent-work/` 与 `tasks/*/.agent-state/`。Task 是独立 Git 仓库时，其 `.gitignore` 还必须加入 `.agent-state/`。不覆盖已有规则。
+- `.agent-state/` 默认不受 Git 保护，不得记录秘密、凭据或不必要的敏感正文。
 
-PLAN_APPROVAL 的所有实际任务均使用 TRACKED。TASK_DELEGATION 配成 TRACKED 时也从实际任务开始记录。
+## 2. 规则路由
 
-AUTO 下出现任一条件即升级 TRACKED：
+开始实际工作前读取：
 
-- 准备建立两个或以上成果里程碑的正式计划；
-- 已有后续工作依赖、需要保存的中间成果或复杂决定；
-- 需要等待用户、后台任务、外部结果，或交接、跨会话、压缩后继续；
-- 存在结果可能不确定、恢复后不能盲目重试的外部动作；
-- 用户要求正式计划、状态、历史、授权记录落盘或指定执行关卡。
+1. `.agent-protocol/rules/lifecycle.md`
+2. 当前 Task 冻结模式对应的一个文件：
+   - `STRICT_APPROVAL` → `strict-approval.md`
+   - `AUTONOMOUS` → `autonomous.md`
+3. 写状态前读取 `checkpoint.md`；收到位于当前 Task 外的明确文件引用时读取 `intake.md`；处理重复错误时读取 `cases.md`；恢复/异常时读取 `recovery.md`。
 
-### FAST
+字段、枚举和块格式以 `.agent-protocol/SCHEMA.md` 为准。全局 AGENTS 继续负责权限、环境、`.git`、实现、验证和外部动作纪律。
 
-只允许 TASK_DELEGATION + AUTO，且以下条件全部成立：无正式计划；预计连续工作可完成；无等待；无需要跨会话保留的中间决定；用户未要求记录、交接或执行关卡。
+## 3. 阶段提交屏障
 
-FAST 仍遵守全局规则、治理规则和当前动作规则。升级时立即保存已有真实事实，不补造过去事件。任务结束前不从 TRACKED 降回 FAST。
+以下动作前必须运行平台对应的 checkpoint 工具，并取得 `CHECKPOINT_COMMITTED`：
 
-## 3. 共用生命周期与检查点
+- 宣称阶段、审查点、交付或返工已经完成；
+- 请求需求确认、Goal 审批、Plan 审批或交付验收；
+- 切换 Phase、Stage、Session，暂停、交接、压缩或结束任务；
+- 开始下一阶段计划。
 
-1. TRACKED 的新建、正式计划、交付、返工、关闭按 lifecycle.md；授权和人工决定按 governance.md 及当前模式规则。
-2. 正式计划写入或修订后保存 PLAN_CREATED / PLAN_REVISED。写入计划不等于批准计划；PLAN_APPROVAL 的新提案不会自动替换已批准计划。
-3. 每个计划步骤满足验收条件后保存 STEP_COMPLETED；部分完成保存 PROGRESS_SAVED，不标 DONE。
-4. 用户决定、授权变化、交付待验收、等待、阻塞、外部动作前后、完成或取消均按 checkpoint.md 保存。
-5. 检查点保存后能否继续由治理规则和未释放的用户关卡决定。PLAN_APPROVAL 可继续当前已批准计划内步骤；TASK_DELEGATION 可继续当前已委托范围。不得把检查点读回成功当成人类批准。
-6. 准备压缩保存 PRE_COMPACTION，保持真实审批和验收状态，保存后等待；恢复不能越过原有等待关卡。
-7. current_state 是完整但短小的恢复入口；plan、decisions、history 和 task_index 只追加。完整历史状态在不可回写 snapshots 中。
+Windows 使用 `checkpoint.cmd`；Linux/macOS 使用 `sh checkpoint.sh`。模型不得直接写 `current_state.md`、`snapshots.md` 或 `history.md`，不得用自己的复述代替脚本验证。结构、哈希、行号、引用、状态转移和副本一致性由脚本、测试或 diff 验证；没有机器证据时写“未验证”。
 
-## 4. 按动作加载规则
+## 4. History 检索
 
-对应完整规则已在上下文时不重复读取；压缩后缺失则重读当前需要的文件。
+History 是项目历史入口。先 grep `KEYWORDS`、`SUBJECT`、`SUMMARY`，只读命中块，再沿 `PLAN_REFS`、`DECISION_REFS`、`CASE_REFS` 和 Snapshot 行号范围读取对应内容。History 回答“在哪里找”；Plan 回答“准备做什么”；Decision 回答“用户为什么授权/拒绝”；Snapshot 回答“当时实际状态与动作”；Case 回答“如何避免已知根因”。
 
-| 动作 | 必读文件（相对 PROJECT_ROOT） |
-|---|---|
-| 判断当前模式、执行前授权、用户关卡、切换模式、人工验收 | `.agent-protocol/rules/governance.md` 及当前模式规则 |
-| 新建、正式计划、计划修订、交付、返工、关闭 | `.agent-protocol/rules/lifecycle.md` |
-| 检查点、历史、准备压缩 | `.agent-protocol/rules/checkpoint.md` |
-| 恢复、中断、记录或配置冲突 | `.agent-protocol/rules/recovery.md` |
-| 文件写入、覆盖、移动、删除、Git 状态变更 | `.agent-protocol/rules/workspace.md` |
-| 代码、脚本、配置实现与调试 | `.agent-protocol/rules/implementation.md` |
-| 联网核验、易变化事实 | `.agent-protocol/rules/verification.md` |
-| 外发、发送、发布、购买、生产、权限、全局环境、破坏性操作 | `.agent-protocol/rules/external-actions.md` |
+## 5. Case 必读与升格
 
-首次创建记录、字段不确定、写入或修复时，按 SCHEMA 标题定位有关章节；不默认加载全文。模板不能替代治理判断。
+- 每个步骤开始和压缩恢复后，只读取 Global、Workspace、当前 Task 三层 Case index；仅在 `TRIGGERS` 匹配时读取详细 Case。
+- 同一 Task 中，同一个已确认 `ROOT_CAUSE_KEY` 第三次发生且尚无 Case 时，脚本输出 `CASE_RECOMMENDATION_REQUIRED`。模型必须提醒并建议落盘；用户未同意不得创建。
+- Task Case 使用 `C-NNNN`。用户可用 `CASE_ELEVATION_APPROVED` 将其复制升格为 Workspace `WC-NNNN` 或 Global `GC-NNNN`；原 Case 不移动、不删除，升格记录来源链与适用边界。
 
-## 5. Search First / Read Narrow
+## 6. 独立文件处理
 
-- 恢复时完整读取 active 和 current_state。
-- plan、decisions、history 和 task_index 默认先搜索稳定字段，再读取对应 BEGIN/END 块。
-- 检索键：TASK_ID、PLAN_REF、PROPOSED_PLAN_REF、DECISION_ID、DELIVERY_REF、ACTION_ID、STEP_ID、EVENT_ID、EVENT_TYPE、STATUS、SUBJECT、TAGS。
-- 不拼接不同记录块。无命中先检查路径、拼写、大小写、转义和 Schema 版本，不立即认定记录不存在。
-- 只有完整审计、损坏修复或文件很小且全读成本可忽略时全读长期记录。
+文件导入不属于状态机 Phase，不改变审批状态。用户随时明确引用文件/文件夹时：
 
-## 6. 实际事实、并发和权限
+- 已在当前 Task 内：原地使用；
+- 在工作区内但不在当前 Task 内：复制并验证到 `UserInput/I-NNNN/`，提醒已复制并询问是否删除源；
+- 不在工作区内：只复制并验证，提醒已复制，不询问删除；
+- 没有活动 Task：不因此创建 Task，等待选择/创建 Task 后处理。
 
-- 状态不能扩大真实授权；用户最新指令、实际文件、运行和远端结果可能使旧状态过时。恢复时核对下一步依赖及授权范围。
-- 同一任务账本只有一个写入者；委派不能扩大范围、另建该任务或并发写账本。没有明确需要时不启动子 Agent。
-- 出现不明并发修改时暂停冲突写入，继续允许的只读调查；无法确定归属时说明具体冲突。
-- 不复制完整聊天、源码、长日志或原始材料到状态；记录稳定结论、短授权依据、路径及必要指纹，不记录秘密。
+只处理用户明确提到的路径。状态目录、协议目录、`.git`、符号链接/junction 不自动复制。复制、哈希、tree diff 与删除前复核由 `intake` 脚本完成，模型不能自行宣称完整。
 
 ## 7. 完成与沟通
 
-- 执行前必须等待时，给出具体需求、PLAN_REF、交付候选或动作范围，明确当前关卡。不要提出无法审阅的笼统批准请求。
-- 只有 current_state、snapshot、history 和决定引用核对一致才能说“已落盘”；未修复写入失败不得声称可安全压缩。
-- 最终说明成果、实际路径、验证、未验证项和审批/验收状态；人工接受不得由模型代签。
-- 不自行修改模式以绕开等待，不同时启用两套项目入口，不为账本移动资产或安装全局工具。
-
-## 8. 项目特有约束
-
-由维护者填写真实构建/测试入口、保护目录、目标平台和交付格式。不要复制完整规则库或临时任务状态。
+- `AGENT_COMPLETION=COMPLETE` 不等于用户验收；严格模式只有当前 Delivery 的 `DELIVERY_ACCEPTED` 才能关闭 Stage。
+- 最终回复前运行只读 `verify`，并引用实际产物、测试/diff 和未验证项。
+- 不提交、推送、打标签、删除源文件或执行其他高影响动作，除非用户已经明确授权对应对象和范围。

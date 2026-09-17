@@ -1,148 +1,118 @@
-# Portable Agent Project Operating Protocol
+# Portable Agent Project Operating Protocol v5.0.0
 
-便携 Agent 项目运行协议（PAPOP） · **v4.0.1**
+[English](README_EN.md) · [为什么要用状态机](docs/WHY.md) · [状态机怎样工作](docs/HOW.md) · [安装指南](docs/INSTALL.md) · [从旧版迁移](docs/MIGRATION.md)
 
-一套纯 Markdown 协议，为能读写文件、调用工具的 Agent 定义行为边界、执行授权、状态保存和压缩后的恢复方法。不需要数据库、后台服务或固定模型。
+PAPOP 是一套给 Agent 使用的工作规则和项目状态机。
 
-项目主页：[github.com/canpus/portable-agent-project-operating-protocol](https://github.com/canpus/portable-agent-project-operating-protocol)
+这里的 **Agent**，就是能读取文件、修改内容、运行命令并连续完成任务的 AI；**Harness** 是承载 Agent 的工具，例如 Codex、Claude Code、OpenCode、ZCode 或 DeepSeek Harness。
 
-**v4 提供三种分发包。计划审批和任务委托是并列的治理选择，共用状态与恢复机制。**
+普通聊天主要依靠当前对话里的上下文。对话变长、发生自动压缩、换模型或隔几天继续时，细节可能丢失。PAPOP 把最终目标、计划、用户决定、当前状态和历史证据写入项目文件，使 Agent 能从磁盘恢复，而不是猜测自己上次做到了哪里。
 
-[English](README_EN.md) · [为什么这样设计](docs/WHY.md) · [安装与日常使用](docs/INSTALL.md) · [迁移与切换](docs/MIGRATION.md) · [更新记录](CHANGELOG.md) · [行为验收场景](docs/BEHAVIOR_CHECKS.md)
+## **你需要做什么**
 
-## 选择一个包
+安装只做一次。日常使用时，你真正需要做的是下面这些事：
 
-| 压缩包 | 适合谁 | 默认行为 |
+1. **开始项目时说清最终想得到什么。** Agent 会和你讨论需求。一个 Task 就是一个项目；同一项目换对话继续时，应当继续原来的 Task，不要重复创建。
+2. **选择适合你的工作方式。** 想逐个把关就使用 Strict Approval；愿意把整个任务交给 Agent 就使用 Autonomous。模式会写进 Task，不能因为后来替换规则文件而静默改变。
+3. **严格审批模式下，认真处理四个审查点。** 你需要依次确认需求、审批 `goal.md`、阅读并审批当前阶段的 `plan.md`、查看真实交付物后决定是否验收。不要只回复“继续”；要明确说哪里正确、哪里要改、是否批准当前版本。
+4. **自主推进模式下，先说清授权边界。** Agent 可以在这个边界内连续工作，但关键决定、具体外部动作、不可逆操作、你设置的关卡以及最终目标变化，仍然会停下来等你决定。
+5. **主动管理上下文。** 如果 Harness 能显示上下文占用，建议在大约一半时准备压缩；即使看不到占用，也建议在一个 Stage 完成并落盘后压缩。先让 Agent 保存检查点，并确认脚本输出 `CHECKPOINT_COMMITTED`，再手动压缩。不要等自动压缩先发生，因为尚未落盘的细节可能丢失。
+6. **压缩、更换模型或换一次新对话后，先核对恢复结果。** Agent 必须重新读取 `goal.md` 和当前状态，并向你复述最终目标、当前阶段、已有批准、未完成事项和下一步。复述不对就立刻纠正，不要让它带着错误继续施工。
+7. **验收时看实际产物和机器证据。** 测试、脚本和 diff 负责验证；Agent 不能靠一句“已经完成”证明结果正确。`AGENT_COMPLETION=COMPLETE` 只表示 Agent 做完了自己的部分，不等于你已经验收。
+8. **随时给文件，但保留原件。** 你引用当前 Task 外的文件时，Agent 会把它复制到该 Task 的 `UserInput/`。工作区外的源文件只复制、不询问删除；工作区内但在 Task 外的源文件，复制并验证后才会询问你是否删除。
+9. **自己备份整个 Task。** **`.agent-state/` 默认被 Git 忽略，PAPOP 不提供自动备份、同步或导出。备份或迁移时必须复制完整 Task 目录，并确认隐藏的 `.agent-state/` 也在其中。**
+
+日常主流程如下。更完整的状态、账本和恢复说明见 [HOW.md](docs/HOW.md)。
+
+![PAPOP v5 用户视角项目流转图](docs/diagrams/v5-user-workflow.png)
+
+## 先选择一个发布包
+
+PAPOP v5 提供三个 ZIP。只安装其中一个，不要把两种状态机同时放进同一工作区。
+
+| 发布包 | 适合谁 | Agent 如何工作 |
 |---|---|---|
-| `portable-agent-project-operating-protocol-v4.0.1-global-rules-only.zip` | 只想约束模型行为，不需要状态机 | 只有 GlobalRules，不创建本协议账本 |
-| `portable-agent-project-operating-protocol-v4.0.1-plan-approval.zip` | 希望执行路线由人类先审阅、交付由人类验收 | 确认需求 → 批准精确计划 → 执行 → 人工验收 → 关闭 |
-| `portable-agent-project-operating-protocol-v4.0.1-task-delegation.zip` | 希望委托目标后由 Agent 持续推进 | 在任务授权范围内执行，缺关键决定/具体授权或遇用户关卡时等待 |
+| **GlobalRules Only** | 只想规范 Agent，不需要项目状态机 | 约束证据、权限、Git、`.gitignore`、`.venv`、依赖、代码修改、验证和外部动作 |
+| **Strict Approval** | 希望重要阶段都由人确认 | 需求确认 → Goal 审批 → Stage Plan 审批 → 施工和验证 → Delivery 验收 |
+| **Autonomous** | 愿意把整个 Task 委托给 Agent | 在授权范围内持续推进，遇到关键决定、具体授权或用户关卡时等待 |
 
-三个包包含完全相同的 GlobalRules。两个状态机包各包含一个生成好的 `ProjectRules/AGENTS.md` 和相同的 `.agent-protocol/`，安装时只选择一个。普通问答和纯讨论不创建任务记录。
+Strict Approval 并不是每执行一个命令都问一次。用户批准的是需求、最终目标、阶段计划和阶段交付；已批准 Plan 内的普通施工步骤可以连续执行。
 
-“计划审批”不是批准每条工具调用，也不默认要求每个计划步骤重新批准。获批计划内可以持续执行；需要更细控制时指定“调查完成后等我”“第二步前确认”等关卡。
+Autonomous 也不是“放任不管”。授权范围之外的动作仍然需要你的明确决定，Agent 完成和用户验收仍然是两件事。
 
-## 快速安装
+## 五分钟安装思路
 
-1. 解压所选 ZIP，将 `GlobalRules/AGENTS.md` 内容安装到宿主支持的全局规则位置。已有规则先备份、合并，保留宿主和组织要求。
-2. GlobalRules Only 到此结束。不需要项目状态文件。
-3. 两个状态机包：把 ZIP 内 **ProjectRules 的内容**复制到目标项目根，而不是多套一层 ProjectRules 目录：
+1. 从 Release 下载所需 ZIP，并完整解压。点号开头的目录可能被系统隐藏，不要漏掉 `.agent-rules/` 或 `.agent-protocol/`。
+2. 把 `GlobalRules/` 的内容安装到 Harness 的用户级规则位置。
+3. 如果选择状态机包，把 `ProjectRules/AGENTS.md` 和 `ProjectRules/.agent-protocol/` 放到工作区根目录；不要多套一层 `ProjectRules/`。
+4. 如果已有自己的规则文件，先备份并合并，不要直接覆盖。
+5. 开始一个全新 Session，让 Agent 说明它实际加载了哪些规则、当前工作区默认是哪种模式，并运行一次安装检查。
+
+Codex、Claude Code、OpenCode、ZCode、DeepSeek Harness 在 Windows、Linux 和 macOS 上的具体位置与验证方法见 [安装指南](docs/INSTALL.md)。终端用户不需要另外安装 Python、Node 或 Mermaid；Windows 使用包内 CMD/PowerShell 工具，Linux 和 macOS 使用包内 POSIX Shell 工具。
+
+## 工作区长什么样
 
 ```text
-你的项目/
-├── AGENTS.md
-├── .agent-protocol/
-└── 原来的源码、输入、文档和交付物……
+<WORKSPACE_ROOT>/
+├── AGENTS.md                         # 工作区状态机入口
+├── .agent-protocol/                  # 规则、模板、跨平台脚本
+├── .agent-work/                      # 事务与锁，默认忽略
+├── .agent-cases/                     # 用户批准升格的工作区 Case
+└── tasks/
+    └── task1_YYYYMMDD_项目名/         # 一个 Task 就是一个项目
+        ├── .agent-state/              # 账本目录，默认忽略
+        │   ├── goal.md
+        │   ├── plan.md
+        │   ├── decisions.md
+        │   ├── history.md
+        │   ├── current_state.md
+        │   ├── snapshots.md
+        │   └── cases/
+        ├── UserInput/                 # 外部输入的只读副本
+        ├── .gitignore
+        └── <项目文件和交付物>
 ```
 
-4. 项目已有 AGENTS.md 时合并入口与稳定项目约束，不覆盖原规则。移除旧状态机的加载指针，保留历史原文和账本。
-5. 确认隐藏的 `.agent-protocol/` 已复制且入口被宿主实际加载。规则只说明行为，不授予宿主没有的权限。
+Task、Session 和 Stage 不是一回事：
 
-源码仓库的 `ProjectRules/AGENTS.template.md` 是构建模板，**不能直接安装**。包内的 AGENTS.md 已替换好模式配置。
+- **Task**：整个项目，可以跨很多次对话。
+- **Session**：一次顶层对话、压缩后的恢复、模型更换或任务交接。
+- **Stage**：一次可以单独计划、施工、交付和验收的工作周期。
 
-## 两个独立维度
+## 六个账本各自做什么
 
-| 配置 | 可选值 | 控制什么 |
+| 文件 | 作用 | 写入方式 |
 |---|---|---|
-| GOVERNANCE_MODE | PLAN_APPROVAL / TASK_DELEGATION | 谁授权执行、何时等待、何时关闭 |
-| RECORD_MODE | AUTO / TRACKED | 哪些实际任务记录状态 |
+| `goal.md` | 保存项目最终目标及其修订历史 | 只追加；修改 Goal 必须追加新版本并明确告知用户 |
+| `plan.md` | 保存每个 Stage 的方案、步骤和审批版本 | 只追加 |
+| `decisions.md` | 保存用户明确作出的批准、拒绝、授权和改变 | 只追加；Agent 不能替用户补写决定 |
+| `current_state.md` | 保存现在走到哪里、下一步是什么 | 唯一允许覆写的核心账本 |
+| `snapshots.md` | 连续保存每次检查点的完整 Current State | 只追加；整个 Task 只有这一个 Snapshot 文件 |
+| `history.md` | 历史检索入口，连接 Plan、Decision、Case、Input 和 Snapshot 行号 | 只追加，由 checkpoint 脚本生成 |
 
-计划审批包固定采用 `PLAN_APPROVAL + TRACKED`：小任务也要有可审阅计划和批准记录。任务委托包默认 `TASK_DELEGATION + AUTO`：连续工作可完成、无正式计划/等待/恢复需要的小任务 FAST；多步骤计划、中间成果、等待、交接、未知外部动作或用户要求记录时升级 TRACKED，结束前不降级。
+Case 位于 `.agent-state/cases/`。同一 Task 中，同一个已确认根因第三次发生时，Agent 必须提醒你，并建议把它记录成 Case。只有你同意后才创建；你还可以决定把通用 Case 升格到工作区或全局。
 
-TASK_DELEGATION 可以由维护者改成 TRACKED，获得全部实际任务的记录。PLAN_APPROVAL 不能用 AUTO 绕过审批。模型不自行切换模式；活动任务的切换按 [迁移指南](docs/MIGRATION.md) 保存真实决定。
+## 状态为什么不会只靠模型自觉
 
-## 日常怎么用
+`checkpoint` 工具会先校验状态转移和引用，再原子覆写 `current_state.md`，把完整内容追加到单一 `snapshots.md`，计算精确起止行和哈希，最后向 `history.md` 追加索引并重新读取验证。
 
-计划审批模式：
+只有脚本输出 `CHECKPOINT_COMMITTED` 才算保存成功。只读检查必须输出 `TASK_STATE_VALID`。模型不能手工补写这三个生成账本，也不能把自己的复述当作验证结果。
 
-> 修复登录刷新问题。请先调查并确认需求，再把计划落盘，等我批准后执行。
+## 进一步阅读
 
-Agent 先做允许的调查、提交需求理解并等待。需求确认后提交精确计划修订；批准计划后执行，交付具体候选后等你验收。沉默、补充信息和确认理解不能代替计划批准；新修订不能继承旧修订的批准。
+- [WHY：状态机解决什么问题，为什么值得使用](docs/WHY.md)
+- [HOW：状态流转、用户参与点、账本、恢复、Case 与文件导入](docs/HOW.md)
+- [INSTALL：五个 Harness 和三大操作系统的安装方法](docs/INSTALL.md)
+- [MIGRATION：从旧版本迁移到 v5](docs/MIGRATION.md)
+- [BEHAVIOR_CHECKS：安装后应该实际检查什么](docs/BEHAVIOR_CHECKS.md)
+- [CHANGELOG：版本变化](CHANGELOG.md)
 
-任务委托模式：
+## 能做什么，不能保证什么
 
-> 修复登录刷新问题，检查受影响行为，每个正式计划步骤完成后保存检查点。
+PAPOP 能减少上下文丢失、目标漂移、跳过审批、重复外部动作、历史难以查找和同类错误反复发生。它不能替代 Harness 的沙箱与权限系统，不能保证模型永不出错，也不能替你备份文件。
 
-Agent 在任务授权范围内持续推进；你仍可指定：
+状态文件是恢复入口，不是不可质疑的事实。每次恢复仍要核对用户最新指令、实际文件、diff、测试和外部状态。
 
-> 先把计划落盘，等我批准再修改文件。发布前另外等我确认。
+## License
 
-这种任务关卡不会自动改变整个项目的治理模式。公开发布、购买、外发私有材料、生产或权限变更等仍检查具体授权；已有具体授权且范围未变时不重复询问。
-
-## 共用状态与恢复
-
-TRACKED 任务按里程碑保存，而不是每条命令都写账本：
-
-```text
-.agent-work/
-├── active.md
-├── task_index.md
-└── tasks/<TASK_ID>/
-    ├── current_state.md
-    ├── current_state.prev.md
-    ├── plan.md
-    ├── decisions.md
-    ├── history.md
-    └── snapshots/<EVENT_ID>.md
-```
-
-- `current_state.md`：完整、短小、可更新的恢复入口；记录模式、活动/待批计划、授权、进度、验收、未知项和下一允许动作。
-- `plan.md`：只追加自包含修订。写入提案不等于批准，也不自动激活待批修订。
-- `decisions.md`：只追加真实用户决定；精确绑定计划修订、交付候选、外部动作或关卡。
-- `history.md`：只追加里程碑增量与完整快照指针。
-- `snapshots/`：提交时 current_state 的字节相同副本，不回写。
-- `active.md` / `task_index.md`：短指针与追加式任务索引，不能扩大授权。
-
-正式计划创建/修订/激活、每步验收完成、关键用户决定、交付待验收、等待/阻塞、外部动作前后、完成/取消时保存检查点。未达步骤验收条件只保存进展，不标完成。
-
-### 准备压缩
-
-> 我准备压缩上下文。请保存并核验 PRE_COMPACTION 检查点，保留治理模式、活动和待批计划、批准引用、用户关卡、交付候选和验收状态、成果证据、失败路线、未知外部动作及下一允许动作。保存后暂停，给出 current_state 路径。
-
-模型不假装观察不可见 Token，不自行设定通用压缩阈值。保存不释放审批关卡，未完成任务不标 DONE。
-
-### 压缩或换会话后恢复
-
-> 读取 `<current_state 路径>`，按 recovery.md 核对计划、决定、最后事件及下一步依赖的实际文件后继续。保留原有关卡，不重新开始。
-
-明确路径直接恢复，不双次确认。恢复先完整读 current_state，再按稳定 ID 搜索 plan/decisions/history 中的单个块，核对实际文件与外部结果；状态不能代替事实或扩大权限。待批计划和待人工验收仍保持等待。
-
-外部动作结果未知先查询，不重复发送、购买、发布或部署。一个任务账本只有一个写入者；项目索引也需要串行治理，追加式文件不自动避免并发冲突。
-
-## 源码结构与构建
-
-```text
-GlobalRules/AGENTS.md                  # 三个包共用
-ProjectRules/AGENTS.template.md        # 生成两个项目入口
-ProjectRules/.agent-protocol/          # 共用规则与契约
-profiles/plan-approval.json            # 计划审批配置
-profiles/task-delegation.json          # 任务委托配置
-docs/                                 # 安装、迁移、验收场景
-scripts/build_release.py              # 仅维护者构建使用
-scripts/validate_release.py            # 源码和包结构核对
-tests/                                # 分发包与数据约束检查
-legacy/v1/                            # 原有旧规则存档
-legacy/v3/                            # v3 活跃规则原文存档
-```
-
-维护者使用 Python 3 标准库，无需额外依赖：
-
-```text
-python scripts/build_release.py
-python scripts/validate_release.py
-python -m unittest discover -s tests -v
-```
-
-产物在 `dist/`：三个 ZIP、SHA256SUMS 和 release-manifest.json。构建白名单不包含历史账本、输入原件、Git 元数据或测试输出；包内包含安装说明、版本、许可和文件哈希清单。ZIP 时间戳固定以便可复现构建，不能拿 ZIP 元数据当实际任务时间。
-
-## 验证与边界
-
-先按 [安装说明](docs/INSTALL.md) 做只读规则加载检查，再用 [行为验收场景](docs/BEHAVIOR_CHECKS.md) 观察真实宿主中的表现。
-
-维护者工具核对源文件引用、配置、模板、枚举、包内文件与源字节、哈希和核心状态约束。它们不执行 Agent，也不能证明所有模型长期遵循协议。规则不是物理权限系统；真实文件、网络、账号权限和审批由宿主控制。
-
-v4 的记录格式与旧版不兼容。旧任务按 [迁移指南](docs/MIGRATION.md) 建立新状态，保留原记录；不能同时加载两套状态机管理同一任务。两种模式并列维护，不表示严格治理应被委托模式取代。
-
-## 许可
-
-[MIT](LICENSE)。
+[MIT License](LICENSE) © 2026 Canpu

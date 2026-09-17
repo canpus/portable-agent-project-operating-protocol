@@ -1,149 +1,113 @@
-# PAPOP v4 记录 Schema
+# PAPOP v5 Schema
 
-## 0. 数据原则
+所有账本使用 UTF-8 无 BOM、LF、一个末尾换行。未知值写 `UNKNOWN`，空引用写 `NONE`。Task 状态根为 `<TASK_ROOT>/.agent-state/`。
 
-- 本契约只定义数据；是否执行、是否等待由项目入口及当前模式治理规则决定。
-- UTF-8，固定大写 ASCII 字段单独占一行：`FIELD: value`。未知 UNKNOWN、不适用 NONE；不留空，不编造时间/ID/批准。
-- 时间使用可获得的 RFC3339 时区时间，不能取得写 UNKNOWN。路径注明相对 PROJECT_ROOT；不存秘密或完整原始材料。
-- plan、decisions、history、task_index 只追加，旧事实通过新记录纠正；current_state 和 active 是可更新的恢复入口。
-- 每个长期块 BEGIN/END 成对且不可嵌套；正文不复用边界标记。机器字段在块头只出现一次，正文采用自然语言或表格，避免制造同名检索行。
+## 1. 标识符
 
-## 1. 目录结构
+- Task：`task<N>_YYYYMMDD_<任务名>`
+- Session：`SES-NNNN`
+- Stage：`STG-NNNN`
+- Requirements：`REQ-NNNN`
+- Goal：`G-NNNN-RNNNN`
+- Plan：`P-NNNN-RNNNN`
+- Decision：`D-NNNNNN`
+- Delivery：`DLV-NNNN-RNNNN`
+- Event：`E-NNNNNN`
+- Snapshot：`SNP-NNNNNN`
+- Input Import：`I-NNNN`
+- Task/Workspace/Global Case：`C-NNNN` / `WC-NNNN` / `GC-NNNN`
 
-```text
-.agent-work/
-├── active.md
-├── task_index.md
-└── tasks/<TASK_ID>/
-    ├── current_state.md
-    ├── current_state.prev.md
-    ├── plan.md
-    ├── decisions.md
-    ├── history.md
-    └── snapshots/<EVENT_ID>.md
-```
+## 2. 六个核心账本
 
-next 是未提交写入的临时文件，不是恢复权威。只在 TRACKED 创建；PLAN_APPROVAL 的实际任务始终 TRACKED。
+### goal.md
 
-## 2. ID 与范围
+`GOAL_REVISION_BEGIN/END` 块，`SCHEMA: PAPOP-GOAL-5`。必填：`TASK_ID`、`GOAL_REF`、`REQUIREMENTS_REF`、`SUPERSEDES`、`STATUS_AT_WRITE`、`SUBJECT`、`CREATED_AT`。正文写最终目标、范围内外、交付物、验收标准、稳定约束和变更影响。
 
-| 对象 | 格式 | 唯一范围 |
-|---|---|---|
-| Task | T-YYYYMMDD-slug，冲突加 -02；日期未知可用 T-slug-序号 | 项目 |
-| Index event | I- 加 6 位数字 | 项目 |
-| Plan | P- 加 4 位数字 | Task |
-| Revision | PLAN_ID 加 -R 和 4 位数字 | Task |
-| Step | S- 加 3 位数字 | 所属 Plan revision |
-| Decision | D- 加 6 位数字 | Task |
-| Event/checkpoint | E- 加 6 位数字 | Task |
-| Delivery candidate | B- 加 4 位数字 | Task |
-| External logical action | X- 加 4 位数字 | Task |
-| User gate | G- 加 3 位数字 | Task |
+### plan.md
 
-跨任务引用带 TASK_ID。旧 ID 不回收；查现有记录递增，不凭模型记忆猜。继承未变步骤可沿用 ID，改变步骤含义分配新 ID并说明映射。一次外部逻辑动作复用 ACTION_ID 和可用幂等标识；新对象/数据/成本不是同一逻辑动作。
+`PLAN_REVISION_BEGIN/END` 块，`SCHEMA: PAPOP-PLAN-5`。必填：`TASK_ID`、`STAGE_ID`、`GOAL_REF`、`PLAN_REF`、`SUPERSEDES`、`STATUS_AT_WRITE`、`SUBJECT`、`CREATED_AT`。正文写阶段成果、步骤与机器验收、范围、用户关卡、外部动作和 Goal 映射。
 
-## 3. 枚举
+### decisions.md
 
-以下表是模板和维护者检查工具的枚举来源。
+`DECISION_BEGIN/END` 块，`SCHEMA: PAPOP-DECISION-5`。必填：`TASK_ID`、`SESSION_ID`、`DECISION_ID`、`DECISION_TYPE`、`TARGET_REF`、`SOURCE: USER_MESSAGE`、`DECIDED_AT`、`SUBJECT`。允许类型：
 
-| 字段/对象 | 允许值 |
-|---|---|
-| GOVERNANCE_MODE | PLAN_APPROVAL / TASK_DELEGATION |
-| RECORD_MODE | AUTO / TRACKED |
-| TASK_STATUS（active/index） | ACTIVE / WAITING / BLOCKED / DONE / CANCELLED |
-| STATUS（current_state） | PLANNING / EXECUTING / VERIFYING / WAITING_USER / BLOCKED / DONE / CANCELLED |
-| WORKFLOW_PHASE | REQUIREMENTS_CONFIRMATION / PLAN_DRAFTING / AWAITING_PLAN_APPROVAL / IMPLEMENTATION / VERIFYING / AWAITING_ACCEPTANCE / REPLAN_REQUIRED / CLOSED |
-| AUTHORIZATION_STATUS | PENDING_REQUIREMENTS / PENDING_PLAN / PLAN_AUTHORIZED / TASK_AUTHORIZED / PENDING_ACTION / SUSPENDED |
-| AGENT_COMPLETION | NOT_STARTED / IN_PROGRESS / COMPLETE |
-| ACCEPTANCE_STATUS | NOT_REQUESTED / AWAITING / ACCEPTED / REJECTED / NOT_REQUIRED |
-| RESUME_MODE | NORMAL / READY_FOR_COMPACTION |
-| STATUS_AT_WRITE（plan） | AWAITING_APPROVAL / ACTIVE |
-| STEP_STATUS | PENDING / IN_PROGRESS / DONE / BLOCKED / SKIPPED |
-| GATE_STATUS | PENDING / RELEASED |
-| DECISION_TYPE | REQUIREMENTS_CONFIRMED / TASK_AUTHORIZED / PLAN_APPROVED / PLAN_REJECTED / DELIVERY_ACCEPTED / DELIVERY_REJECTED / ACTION_AUTHORIZED / USER_GATE_RELEASED / USER_GATE_CHANGED / GOVERNANCE_CHANGED / CORRECTION |
-| DECISION_SOURCE | USER_MESSAGE / USER_INSTRUCTION / UNKNOWN |
-| EVENT_TYPE（history） | TASK_CREATED / PLAN_CREATED / PLAN_REVISED / PLAN_ACTIVATED / USER_DECISION / STEP_COMPLETED / PROGRESS_SAVED / DELIVERY_READY / PRE_COMPACTION / RESUMED / EXTERNAL_INTENT / EXTERNAL_RESULT / WAITING / BLOCKED / TASK_COMPLETED / TASK_REOPENED / TASK_CANCELLED / RECOVERY_REPAIR |
-| EVENT_STATUS（history） | SUCCESS / PARTIAL / WAITING / BLOCKED / FAILED / UNKNOWN |
-| INDEX_EVENT_TYPE | TASK_CREATED / TASK_ACTIVATED / TASK_WAITING / TASK_BLOCKED / TASK_COMPLETED / TASK_CANCELLED |
+`REQUIREMENTS_CONFIRMED`、`REQUIREMENTS_REJECTED`、`GOAL_APPROVED`、`GOAL_REJECTED`、`PLAN_APPROVED`、`PLAN_REJECTED`、`DELIVERY_ACCEPTED`、`DELIVERY_REJECTED`、`TASK_AUTHORIZED`、`ACTION_AUTHORIZED`、`USER_GATE_RELEASED`、`USER_GATE_CHANGED`、`CASE_RECORD_APPROVED`、`CASE_RECORD_DECLINED`、`CASE_ELEVATION_APPROVED`、`MODE_SWITCH_APPROVED`、`TASK_CANCELLED`。
 
-## 4. active.md
+推断、沉默和 Agent 自己的决定不能作为用户 Decision。
 
-Schema：PAPOP-ACTIVE-4。模板 active.md 定义全部必填字段：SCHEMA、TASK_ID、TASK_STATUS、GOVERNANCE_MODE、SUBJECT、CURRENT_STATE、UPDATED_AT。
+`MODE_SWITCH_APPROVED` 的 `TARGET_REF` 固定为 `GOVERNANCE_MODE:<旧模式>-><新模式>`，并由切换检查点列入 `RELATED_DECISION_REFS`。稳定 Goal 改为新 Revision 时，必须用 `GOAL_APPROVED` 精确绑定新的 `GOAL_REF`。
 
-完整读取，保持短小，切换活动任务可覆盖。不是授权或任务事实的权威。
+### current_state.md
 
-## 5. task_index.md
-
-Schema：PAPOP-TASK-INDEX-4。边界 TASK_INDEX_EVENT_BEGIN/END。模板 task-index-event.md 定义必填字段。
-
-同一任务最后一个结构完整、追加顺序最新的事件表示最新索引状态。时间不推翻追加顺序。任务创建、激活/重开、等待、阻塞、完成、取消时追加，普通步骤不追加项目索引。
-
-只允许一个项目索引写入者；多任务并行须由协调者串行分配 I 编号和追加，不能仅凭“只追加”假定无竞态。
-
-## 6. plan.md
-
-Schema：PAPOP-PLAN-4。边界 PLAN_REVISION_BEGIN/END。模板 plan-revision.md 的块头及正文小节全部必填。
-
-- PLAN_REF 是块的精确修订。STATUS_AT_WRITE 保留写入时状态，不因批准或替代回写。
-- REQUIREMENTS_CONFIRMATION_REF 引用该提案基于的 REQUIREMENTS_CONFIRMED 决定；PLAN_APPROVAL 必需，委托模式无该确认可写 NONE。
-- TASK_AUTHORIZATION_REF 引用 TASK_AUTHORIZED 决定；TASK_DELEGATION 的正式计划必需，审批模式可写 NONE。
-- SUPERSEDES 仅记录拟替代关系，不构成激活或授权。
-- 已批准修订由 current_state 的 PLAN_REF 和 PLAN_APPROVAL_REF 联合确认。待批新修订只写 PROPOSED_PLAN_REF；旧活动计划引用不丢失。
-- 正文须包含目标/交付、范围与排除、核心约束、授权依据与另批动作、用户关卡、步骤/验收、修订映射。每个修订自包含，不要求靠全读旧计划理解。
-- 步骤进度表是提案写入时快照；实际进度在核对后的 current_state。不回写旧计划来维护进度。
-
-## 7. decisions.md
-
-Schema：PAPOP-DECISION-4。边界 DECISION_BEGIN/END。模板 decision.md 的字段和正文小节必填。
-
-- DECISION_ID 是稳定审批/授权引用；TARGET_REF 指向精确计划、交付候选、外部动作、用户关卡或 Task。
-- PLAN_APPROVED/REJECTED 的 PLAN_REF 和 TARGET_REF 必须一致；批准 rev1 不批准 rev2。
-- DELIVERY_ACCEPTED/REJECTED 的 DELIVERY_REF 和 TARGET_REF 一致，正文含实际候选路径、稳定指纹与用户反馈。接受一个候选不接受之后的修改版本。
-- ACTION_AUTHORIZED 的 ACTION_ID 和 TARGET_REF 一致，正文记录具体对象、动作、数据、成本、范围及排除项。
-- REQUIREMENTS_CONFIRMED 以 TASK_ID 为目标，正文自包含用户实际确认的需求。TASK_AUTHORIZED 以 TASK_ID 为目标，记录委托来源与范围。
-- USER_GATE_RELEASED/CHANGED 以 GATE_ID 为目标；模式切换以 TASK_ID 为目标并保存旧/新模式和范围。
-- USER_EVIDENCE 保存短原文或准确语义；SOURCE_REF 无稳定消息 ID 时 UNKNOWN。用户来源 UNKNOWN 的决定只能作为待核查线索，不能授予批准。
-- 无关 PLAN_REF/DELIVERY_REF/ACTION_ID 写 NONE；CORRECTION_OF 只在纠正旧决定时填旧 DECISION_ID，否则 NONE。错误批准记录的存在不能创造授权，修复时重新核实来源。
-
-## 8. current_state.md
-
-Schema：PAPOP-CURRENT-4。模板 current-state.md 的全部顶层字段及正文小节必填；每次检查点全量写入，稳定目标/约束原样继承，避免反复摘要。
-
-- PLAN_REF：当前激活计划；PROPOSED_PLAN_REF：当前待批提案；没有则 NONE。
-- REQUIREMENTS_CONFIRMATION_REF、PLAN_APPROVAL_REF、TASK_AUTHORIZATION_REF、ACCEPTANCE_REF、LAST_DECISION_REF：实际存在的决定 ID，无则 NONE。
-- PLAN_APPROVAL 进入实质施工必须 PLAN_AUTHORIZED、精确活动计划及批准引用、需求确认引用均有效。SUSPENDED/PENDING_* 不可执行实质施工。
-- TASK_DELEGATION 的 TRACKED 实质执行必须有有效任务委托引用，且没有覆盖当前动作的待批提案、待授权动作或用户关卡。
-- ACTIVE_STEP 属于活动 PLAN_REF。待批提案的下一拟执行步骤放正文，不把它写成活动步骤。
-- AGENT_COMPLETION: COMPLETE 与 ACCEPTANCE_STATUS: AWAITING 可同时成立；PLAN_APPROVAL 此时 STATUS: WAITING_USER、WORKFLOW_PHASE: AWAITING_ACCEPTANCE，不能 DONE。
-- PLAN_APPROVAL 的 DONE 必须 AGENT_COMPLETION: COMPLETE、ACCEPTANCE_STATUS: ACCEPTED、有效 ACCEPTANCE_REF，绑定当前 DELIVERY_REF。
-- TASK_DELEGATION 的 DONE 允许 NOT_REQUIRED；如人工验收关卡存在，必须 ACCEPTED 和有效接受引用。
-- CANCELLED 不证明人工接受。未完成步骤不标 DONE，执行中或未知外部动作必须保留查询方法。
-- 用户关卡表保存 GATE_ID、TARGET、STATUS、DECISION_REF；无关卡写 NONE。有效释放引用只覆盖其目标；状态变化需真实用户决定。
-- LAST_EVENT_ID、LAST_EVENT_TYPE、LAST_SNAPSHOT 对应同一有效检查点；初始未提交状态才允许 NONE。
-
-## 9. history.md
-
-Schema：PAPOP-HISTORY-4。边界 HISTORY_EVENT_BEGIN/END。模板 history-event.md 的字段与 CHANGE/EVIDENCE/NEXT 必填。
-
-- 同一任务 EVENT_ID 唯一；PLAN_REF 为事件时活动计划，PROPOSED_PLAN_REF 为待批计划。
-- STEP_ID 无计划步骤时 NONE；DECISION_REF 无本事件相关决定时 NONE；ACTION_ID、DELIVERY_REF 无关时 NONE。
-- EVENT_STATUS 表示事件结果，不与任务 STATUS、人工验收混用。STEP_COMPLETED 必须在步骤验收条件已满足后使用。
-- EXTERNAL_INTENT/RESULT 使用同一 ACTION_ID；结果只能 SUCCESS / FAILED / UNKNOWN。INTENT 不是成功证据，也不是授权。
-- SNAPSHOT 指向提交时的完整 current_state 副本，事件只记录本次增量和证据，不重复全文。
-
-## 10. snapshots
-
-snapshots/<EVENT_ID>.md 必须与提交时 current_state 字节完全一致。复制文件，不让模型重述；完成后不回写。发现错误以新检查点修正，保留旧事实。
-
-## 11. 检索与写入验收
+`SCHEMA: PAPOP-CURRENT-5`，必须包含：
 
 ```text
-rg -n '^PLAN_REF: P-0001-R0002$' .agent-work/tasks/<TASK_ID>/plan.md
-rg -n '^DECISION_ID: D-000003$' .agent-work/tasks/<TASK_ID>/decisions.md
-rg -n '^TARGET_REF: P-0001-R0002$' .agent-work/tasks/<TASK_ID>/decisions.md
-rg -n '^EVENT_ID: E-000014$' .agent-work/tasks/<TASK_ID>/history.md
-rg -n '^ACTION_ID: X-0001$' .agent-work/tasks/<TASK_ID>/history.md
-rg -n '^TASK_ID: <TASK_ID>$' .agent-work/task_index.md
+TASK_ID, SESSION_ID, STAGE_ID, GOVERNANCE_MODE,
+PHASE, EXECUTION_STATUS, AUTHORIZATION_STATUS,
+AGENT_COMPLETION, ACCEPTANCE_STATUS,
+REQUIREMENTS_REF, REQUIREMENTS_DECISION_REF,
+GOAL_REF, PROPOSED_GOAL_REF, GOAL_DECISION_REF,
+ACTIVE_PLAN_REF, PROPOSED_PLAN_REF, PLAN_DECISION_REF,
+TASK_AUTHORIZATION_REF, DELIVERY_REF, ACCEPTANCE_REF,
+CURRENT_STEP, STATE_REVISION, LAST_EVENT_ID, LAST_SNAPSHOT_ID,
+LAST_EVENT_TYPE, EVENT_STATUS, EVENT_KEYWORDS, EVENT_SUBJECT,
+EVENT_SUMMARY, RELATED_PLAN_REFS, RELATED_DECISION_REFS,
+RELATED_CASE_REFS, RELATED_INPUT_REFS,
+INCIDENT_SIGNATURE, ROOT_CAUSE_KEY, ROOT_CAUSE_EVIDENCE,
+ROOT_CAUSE_OCCURRENCE, EVENT_CHANGE, EVENT_EVIDENCE,
+NEXT_ACTION, UPDATED_AT
 ```
 
-搜索后只读取完整对应块。记录追加前确认 ID 未重复、字段唯一/齐全、枚举合法、引用属于同一任务且存在、真实用户来源和范围相符。读回核对决定、current_state、snapshot、history 和必要索引；不把结构完整误当业务事实正确。
+枚举：
+
+- `GOVERNANCE_MODE`: `STRICT_APPROVAL` | `AUTONOMOUS`
+- `PHASE`: `TASK_ONBOARDING` | `REQUIREMENTS_DISCUSSION` | `AWAITING_REQUIREMENTS_CONFIRMATION` | `GOAL_DRAFTING` | `AWAITING_GOAL_APPROVAL` | `PLAN_DRAFTING` | `AWAITING_PLAN_APPROVAL` | `IMPLEMENTATION` | `VERIFYING` | `AWAITING_DELIVERY_ACCEPTANCE` | `REWORKING` | `STAGE_CLOSED` | `BLOCKED` | `CANCELLED`
+- `EXECUTION_STATUS`: `NOT_STARTED` | `IN_PROGRESS` | `WAITING` | `BLOCKED` | `COMPLETED` | `CANCELLED`
+- `AUTHORIZATION_STATUS`: `PENDING_REQUIREMENTS` | `PENDING_GOAL` | `PENDING_PLAN` | `PLAN_APPROVED` | `TASK_AUTHORIZED` | `PENDING_ACTION` | `SUSPENDED`
+- `AGENT_COMPLETION`: `NOT_STARTED` | `IN_PROGRESS` | `COMPLETE`
+- `ACCEPTANCE_STATUS`: `NOT_REQUESTED` | `AWAITING` | `ACCEPTED` | `REJECTED` | `NOT_REQUIRED`
+- `EVENT_STATUS`: `SUCCESS` | `PARTIAL` | `WAITING` | `BLOCKED` | `FAILED` | `UNKNOWN`
+
+正文至少含：需求草案、稳定 Goal、当前 Stage/Plan、执行状态、机器验证、交付/验收、关卡、输入、阻塞、关键路径。
+
+### snapshots.md
+
+仅 checkpoint 工具写入。所有 `PAPOP-SNAPSHOT-5` 块追加在同一文件，包含 Snapshot/Event/State 标识、`STATE_SHA256`、`CONTENT_BYTES`、时间及完整 Current 原始字节。禁止创建 `snapshots/` 目录。
+
+### history.md
+
+仅 checkpoint 工具写入。每个 `PAPOP-HISTORY-5` 块是检索索引，至少包含：Session/Stage/Phase、事件状态、Requirements/Goal、`PLAN_REFS`、`DECISION_REFS`、`CASE_REFS`、`INPUT_REFS`、Incident/Root Cause/Occurrence、Snapshot ID、`SNAPSHOT_START_LINE`、`SNAPSHOT_END_LINE`、`SNAPSHOT_BLOCK_SHA256`、State 哈希、关键词、摘要、动作、证据和下一步。
+
+## 3. Case
+
+`cases/index.md` 使用 append-only `CASE_INDEX_BEGIN/END` 块：`CASE_ID`、`SCOPE`、`STATUS`、`TITLE`、`ROOT_CAUSE_KEY`、`TRIGGERS`、`SUMMARY`、`DETAIL_PATH`、来源链和时间。
+
+详细 Case 文件使用 `PAPOP-CASE-5`，头部绑定 `CASE_RECORD_APPROVED`；后续通过 append-only `CASE_OCCURRENCE_BEGIN/END` 增加重犯记录。升格 Case 必须绑定 `CASE_ELEVATION_APPROVED` 并保留原 Case。
+
+Task Case 位于 `<TASK_ROOT>/.agent-state/cases/`；Workspace Case 位于 `<WORKSPACE_ROOT>/.agent-cases/`；Global Case 位于全局 `AGENTS.md` 同级的 `.agent-cases/`。Workspace/Global 目录仅在首次获批升格时创建，均使用一个 `index.md` 和按 ID 命名的详情文件。
+
+## 4. 严格模式转移
+
+```text
+REQUIREMENTS_DISCUSSION
+→ AWAITING_REQUIREMENTS_CONFIRMATION (REQ 已在 Snapshot)
+→ GOAL_DRAFTING (REQUIREMENTS_CONFIRMED)
+→ AWAITING_GOAL_APPROVAL (Goal 提案已追加)
+→ PLAN_DRAFTING (GOAL_APPROVED)
+→ AWAITING_PLAN_APPROVAL (Plan 提案已追加)
+→ IMPLEMENTATION (PLAN_APPROVED)
+→ VERIFYING
+→ AWAITING_DELIVERY_ACCEPTANCE (Delivery + 机器证据)
+→ STAGE_CLOSED (DELIVERY_ACCEPTED)
+→ 下一 STAGE 的 PLAN_DRAFTING
+```
+
+任一拒绝返回对应撰写/返工状态。新版本必须获得新批准。
+
+## 5. 事务不变量
+
+- `STATE_REVISION`、Event、Snapshot 每次提交严格递增。
+- 所有非 `NONE` Ref 在提交前已存在且属于同一 Task/Stage。
+- Snapshot 内容逐字节等于提交后的 Current；History 行号精确覆盖完整 Snapshot 块，并保存块哈希。
+- 同一 Root Cause 的 Occurrence 由脚本按当前 Task History 计数。第三次且无 Case Ref 输出建议标记。
+- verify 只读；任何验证失败都不能由模型解释为成功。

@@ -1,0 +1,22 @@
+<!-- GOAL_REVISION_BEGIN -->
+SCHEMA: PAPOP-GOAL-5
+TASK_ID: task1_YYYYMMDD_任务名
+GOAL_REF: G-0001-R0001
+REQUIREMENTS_REF: REQ-0001
+SUPERSEDES: NONE
+STATUS_AT_WRITE: PROPOSED
+SUBJECT: <Goal 标题>
+CREATED_AT: <ISO-8601 with timezone>
+
+## 最终目标
+
+## 范围内
+
+## 范围外
+
+## 交付物与验收标准
+
+## 稳定约束
+
+## 相对上一版本的影响
+<!-- GOAL_REVISION_END -->

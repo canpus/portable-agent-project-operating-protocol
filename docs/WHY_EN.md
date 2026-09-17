@@ -1,105 +1,147 @@
-# Why It Is Designed This Way (WHY)
+# Why Agent Projects Need a State Machine
 
-This document explains why PAPOP turned out the way it did: what problems it is trying to solve, what flaw each mechanism is aimed at, and what you as a user need to do.
+[Back to README](../README.md) · [See how the state machine works](HOW_EN.md) · [Installation guide](INSTALL.md)
 
-If all you want is how to install and use it, [README](../README.md) and [Installation instructions](INSTALL.md) are enough; this document answers the "why".
+## In one sentence
 
----
+An Agent can keep doing things for a long time, but one conversation is not a reliable project record. A state machine turns "how far we are, what has been approved, what is allowed next" into checkable files and explicit transition rules.
 
-## In short
+It is not there to make the process look more formal. It is there to keep long tasks from gradually losing shared facts after the conversation grows, the model changes, context is compacted, work is redone, and delivery is reviewed several times.
 
-When I use AI to get work done, it has burned me a few times: halfway through a conversation it suddenly "loses its memory", it drifts off while working, and in the end I have no idea what it actually touched. So I put together this set of rule files, aimed squarely at these few problems.
+## What usually goes wrong without a state machine
 
-It is not software, there is nothing to install, just a few Markdown text files that you drop into your project, and the AI reads them by itself every time it starts work.
+### 1. The conversation is still there, but the details are gone
 
-## 1. What problems it solves
+A long conversation may be compacted automatically. The model usually still remembers the general direction, but it may lose details such as:
 
-### 1. One context compaction, one model switch, and everything said before is forgotten
+- scope you explicitly excluded;
+- why one option was rejected;
+- which Plan revision was actually approved;
+- whether an external action has already been performed;
+- whether the tests were really run, or only planned;
+- where it is safest to continue from.
 
-**Problem**: the AI's "memory" is just a context window of limited length. Talk long enough and the client compacts it; or you switch to another model or another window, and what was said before and how far the work got are all gone.
+If these facts exist only in the chat log, recovery has to rely on a summary or on the model's guess.
 
-**Solution**: move the memory out of its head and onto the disk. The project gets a `.agent-work/` directory that exists purely to hold the ledger. At every milestone (plan finished, a step done, you make a key decision, delivery coming up, hitting a wait, before and after an external action), the AI writes the current state down again. Compaction can wipe what is in its head; it cannot wipe files on the hard drive.
+PAPOP stores the final Goal, the Plan, user Decisions, the Current State, and historical Snapshots separately. After compaction, it recovers from the files first, then checks them against the actual workspace.
 
-The ledger has a few pieces:
+### 2. "Do this project for me" is misread as "every action is approved"
 
-| File | What it does |
-|------|------|
-| `current_state.md` | **Current state**, short but complete: what the project looks like now, how far it has got, what to do next |
-| `plan.md` | **The plan**, append-only; every change to the plan adds a whole new block and leaves the old ones untouched |
-| `decisions.md` | **Your decisions**; every time you say "approved", "acceptance passed", or "this one can ship", it writes that down, bound precisely to the plan or the delivery revision of that moment |
-| `history.md` | **Milestone events**, append-only; each entry records only "what changed this time", never copying the full text again |
-| `snapshots/` | On every checkpoint it stores a **verbatim copy** of the current state, and once stored that copy must not be changed |
+Authorization for a project is not authorization for every action. For example, "help me publish the website" does not necessarily include buying a domain, deleting the old site, overwriting production, or sending private material to a third party.
 
-### 2. Once the context gets long, attention scatters and it forgets what it should be doing right now
+The state machine splits authorization into recognizable gates:
 
-**Solution**: `current_state.md`. Its core requirement is "short + complete + readable at any moment" — one read has to tell three things: what has already been finished, what state the project is in now, and what to do next. Before it picks the work back up, the AI reads this first, instead of digging through tens of thousands of lines of history.
+- strict mode requires exact confirmation of Requirements, Goal, Plan, and Delivery;
+- Autonomous mode lets the Agent keep moving inside the Task's authorization boundary;
+- both modes pause when a key decision is missing, when a specific external authorization is needed, when a user gate is reached, or when the final Goal is about to change.
 
-### 3. It drifts off target while working and forgets what it originally set out to do
+This way the Agent does not have to ask again for every small step, and one vague authorization cannot jump over the decisions that really matter.
 
-**Solution**: `plan.md` plus your approval. The rules require that before it touches anything, it must first write the plan down and show it to you; only after you nod does the work start. The plan is appended block by block, and each block carries its own goal, scope, what it will not do, the steps, and how each step counts as done.
+### 3. The plan changed, but the old approval is still being used
 
-There is a key design point here: **writing a new plan does not mean you have approved it**; and what you approve is *that one revision* — change it once and you have to approve it again; an old approval cannot quietly move over to a new revision. That is how it is stopped from changing the goal behind your back.
+Long projects are redone often. The most dangerous case is not the rework itself, but a Plan that has materially changed while the Agent keeps executing on the "approval" of an old revision.
 
-### 4. History keeps piling up, and reading all of it is costly and pollutes the context
+PAPOP gives Requirements, Goal, Plan, and Delivery stable references. An approval or a rejection is bound to a specific revision. A new revision needs a new decision, and an old approval is not inherited automatically.
 
-**Solution**: fix the field format of the records, then **locate by search and read only that small block**. Every record has fixed tags (task ID, plan revision number, event ID, state, subject, and so on). When it needs history, it first runs `grep` to search for the ID and locate the block, reads only that block (a few dozen lines), and never loads the whole file. History itself also stores only "what changed this time" plus a snapshot pointer, instead of copying the entire state again.
+### 4. The Agent says "done", but there is no reliable evidence
 
-### 5. Not knowing what it actually did, and being afraid it will go off the rails
+A model can write a very confident completion note, while it skipped a test, misread command output, failed to check the generated files, or mistook "the file has been produced" for "the result meets the requirement".
 
-**Solution**: several locks chained together —
+PAPOP records separately:
 
-- before it touches anything there must be a plan you approved (Plan Approval mode);
-- the moment a step is finished, the ledger has to be updated;
-- after delivery **you** have to do the acceptance, and the rules hard-code it: **the agent passing its own checks only proves that it checked; it cannot say "acceptance passed" in your place**;
-- external actions (publishing, sending messages, buying things, changing production) need separate authorization, with an entry written before and after execution; when the result is uncertain (it went out but you do not know whether it worked) it must **check first and must not resend**;
-- you can define gates at any time, for example "wait for my confirmation before publishing" — the agent **cannot decide for itself that such a gate is "no longer important" and drop it**; a gate is released only when you explicitly release it.
+- whether the Agent finished the implementation;
+- whether the scripts, tests, or the diff passed;
+- whether you accepted the current Delivery.
 
-### 6. Not every project deserves this much weight
+Structure, state transitions, hashes, Snapshot line numbers, and file copies are verified by scripts. The model's retelling cannot replace machine evidence, and Agent completion cannot replace your acceptance.
 
-**Solution**: grade them into tiers.
+### 5. The state was half-written, and recovery cannot tell which copy is real
 
-- **Plan Approval mode**: for real projects, where every key point needs your nod;
-- **Task Delegation mode**: for when you just want to hand over a goal and let it push forward on its own — it works within the boundary you set, and stops to ask only when a key decision is missing, specific authorization is missing, or it runs into a gate you set;
-- **FAST**: small jobs that can be finished in one go create no ledger; it just does the work and shows you the result.
+If the Agent changes the Current State first and is then interrupted while writing History, it leaves files that disagree with each other. The next conversation may read one of them and continue, spreading the error further.
 
-## 2. What you need to do
+PAPOP's checkpoint tool checks fields, references, and state transitions before writing, takes the Task lock, and then updates Current, Snapshot, and History in a fixed order. It saves transaction information and, after a crash in the middle, finishes idempotently under the same transaction. It prints `CHECKPOINT_COMMITTED` only after the read-back verification succeeds.
 
-### 1. Keep an eye on the context, and call a halt yourself when it is time to compact
+### 6. There is plenty of history, but no way to find why it was done that way
 
-Under these rules, **the AI does not estimate tokens and does not set a fixed threshold** (that is deliberate — different models and different clients have different limits, and hard-coding a number is only misleading). So this job is yours: when the client's context usage looks about full, tell it:
+Packing everything into one ever-growing file does not create usable memory. Reading all the history every time wastes context, and it is easy to grab the wrong point out of a large amount of text.
 
-> Persist the current state to disk, the context is getting a bit long and I want to compact manually.
+PAPOP makes `history.md` the search entry point. Each history record stores keywords and a summary, and links to:
 
-It will save the ledger and check it over, then **stop and wait for you**. Once you have confirmed it is saved, run the compaction yourself (for example `/compact`), and when that is done tell it:
+- the corresponding Plan number;
+- the user Decision number;
+- the Case number;
+- the Input number;
+- the exact start and end lines of the Snapshot in the single `snapshots.md`;
+- the hashes of the State and the Snapshot.
 
-> Continue
+To look up history, search History first, then follow the pointers and read only the records you need. This answers "why it was done, which revision was approved, what was done at the time, and what the result was".
 
-It will read `current_state.md`, check it against the real files, and carry on. Note: **gates that were never released and deliveries that were never accepted are still there after compaction** — compaction does not turn them into "approved by default".
+### 7. The same mistake keeps being repeated
 
-### 2. When it asks you to approve a plan, read it carefully
+Ordinary history can prove that a mistake happened, but it does not necessarily warn the Agent in time the next time the same situation appears.
 
-This is the most valuable part of the whole thing, so do not be lazy. If it looks fine, reply "approved"; if not, just say what is wrong and how you want it changed — it will put out a new revision and you approve again. **Only your "approved" counts**; its own "I understand your requirements now" is not an approval.
+PAPOP's Case stores the root cause, the trigger scenario, the way to avoid it, and the chain of events. Within one Task, when the same confirmed root cause appears for the third time, the system requires the Agent to explicitly warn you and to recommend fixing it as a Case. The details are read only when the trigger scenario matches, so that not every lesson is loaded every time.
 
-### 3. When it asks you for acceptance, test it step by step
+A Task Case affects only the current project. When you consider it strongly general, you can explicitly approve promoting it to the workspace or global level; the original Case and the source chain are still kept.
 
-It will give you the deliverable, the acceptance steps, and the pass criteria. Try them one by one: if they pass, say "acceptance passed"; if something is wrong, just describe it — "XXX has a bug, and this is how it shows up". It will rework a new revision, and you check it again.
+### 8. You provided files, but origin and ownership became confusing
 
-### 4. For pure chat, just say hello
+You may put files in the workspace root first, or reference files outside the workspace during the conversation. If the Agent edits the original directly, it later becomes hard to tell which files are inputs and which are task outputs, and your files may be deleted by mistake.
 
-If you are only asking something in passing or discussing an idea, say one line to it:
+PAPOP makes file intake a separate flow that does not change the main state machine:
 
-> A pure Q&A: XXX
+- files already inside the current Task are used in place;
+- files inside the workspace but outside the Task are copied and verified, and then you are asked whether to delete the source files;
+- files outside the workspace are only copied into `UserInput/`, and you are not asked to delete the source files.
 
-That way it will not create a task ledger for you, and it will not make you approve a plan.
+## Why a "state machine" is needed instead of just one progress note
 
-## 3. A few points that are easy to mix up
+A progress note can only describe "what the model believes happened". A state machine also defines:
 
-- **"A plan was written" is not "you approved it"**: persisting a plan to disk only makes it a proposal; it takes your nod to take effect.
-- **"It says it is done" is not "you passed acceptance"**: these two are recorded separately — it can mark "complete", but the acceptance state is still "waiting for your acceptance".
-- **It cannot say "acceptance passed" in your place**, and it cannot mark an unfinished step as finished.
-- **Decision records are append-only and never rewritten**: if you change your mind later, it adds a correction entry instead of quietly editing the old one — so "who approved what, and when" can always be looked up.
-- **Once a small job has been upgraded into a formal task it never drops back down**: this prevents downgrading a job that should leave a record into one that leaves none, just to save effort.
+- which states are currently legal;
+- what conditions allow a move to the next state;
+- which transitions require a user Decision;
+- which revision of the Goal, Plan, or Delivery is approved;
+- when a checkpoint must be written;
+- how to stop and recover when a write fails;
+- which things are still unknown and must not be written as complete.
 
----
+A state machine turns natural-language promises into verifiable constraints. What it reduces is the cost of re-explaining the project in every conversation, and the risk of an error growing further after a bad recovery.
 
-**One sentence to sum it up**: it turns "what the AI did, who approved it, how far it got, whether the next move is allowed" into records on disk that can be looked up, handed over, and recovered — instead of relying on the model to remember it all inside an ever-growing conversation.
+## Why both strict approval and autonomous progress are provided
+
+Different users want different levels of control.
+
+Strict approval suits these situations:
+
+- you want to decide the requirements, the final Goal, and the stage plan yourself;
+- rework is expensive, so one more look at the Plan before implementation is worth it;
+- the project needs to clearly prove who approved which revision and when;
+- you do not want the Agent to infer your intent on its own at important points.
+
+Autonomous progress suits these situations:
+
+- the task goal and the authorization boundary are already clear;
+- you want the Agent to complete investigation, changes, and verification in a row;
+- ordinary implementation choices do not need item-by-item approval;
+- you step in only for key decisions, extra authorization, or gates you have set.
+
+Both modes share the same ledgers, recovery, machine verification, Case, and file intake mechanisms. The difference is which state transitions must wait for a human.
+
+## What the state machine cannot solve
+
+PAPOP cannot guarantee that a model never makes an error, and it does not replace:
+
+- the Harness's sandbox, permission, and approval mechanisms;
+- operating-system permissions;
+- Git, cloud drives, or other backups;
+- the release and rollback rules of a production environment;
+- human judgment about the requirements, the Plan, and the final deliverables.
+
+Ledger contents can be written incorrectly too, so recovery must compare them with your latest instructions, the actual files, diffs, tests, and external state. State is a recovery entry point, not unquestionable truth.
+
+## When it is worth using
+
+The state machine is usually worth using if a task spans multiple stages, may have its context compacted, involves rework, contains important user decisions, needs a handoff, or will still need maintenance later.
+
+If you only want the Agent to follow basic discipline for files, Git, dependencies, verification, and authorization, and the task is short and needs no persistent state, you can install GlobalRules Only alone.

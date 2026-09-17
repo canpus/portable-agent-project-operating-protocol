@@ -4,23 +4,26 @@
 
 版本格式参考 [Semantic Versioning](https://semver.org/)。v3 的项目规则结构和任务记录格式与旧版不兼容，因此使用新的主版本号。
 
-## 4.0.1 - 2026-09-16
+## 5.0.0 - 2026-09-17
 
-### 文档
+- 层级重构为全局 → 工作区 → Task（Project）；Task、Session、Stage 身份分离。
+- 发布 GlobalRules Only、Strict Approval、Autonomous 三个包；工作区模式是新 Task 默认值，既有 Task 冻结模式。
+- 严格模式使用 Requirements 确认、Goal 审批、每 Stage Plan 审批、Delivery 验收四个关卡，并在 Stage 关闭后循环下一阶段。
+- 六个核心账本集中在 Task `.agent-state/`；Snapshot 为单一增长文件，History 通过关键词、Ref、精确行号和哈希连接当时上下文。
+- 引入任务锁、预提交语义校验、原子 Current 替换、幂等部分提交恢复和只读机器验证。
+- 引入 Task/Workspace/Global 三级 Case，同根因在同 Task 第三次发生时建议落盘，升格保留来源链。
+- 文件导入成为独立流程：工作区内 Task 外输入复制验证后可询问删除；工作区外输入只复制并保留。
+- 用户工具改为 Windows CMD/PowerShell 与 Linux/macOS POSIX Shell，不要求 Python 运行时；Python 仅用于维护者构建和测试。
+- 增加 `.gitattributes`、`.editorconfig` 与发布字节检查：通用文本 LF、CMD CRLF、UTF-8 无 BOM、ZIP 解压结果一致。
+- `.agent-state/` 继续默认忽略，并在 README 加粗说明 PAPOP 不提供自动备份、同步或导出。
 
-- 新增 `docs/WHY.md` 与 `docs/WHY_EN.md`：解释设计动机、机制如何运作，以及使用者需要做什么。
-- README 中英文版增加 WHY 文档入口链接。
-- 构建白名单纳入两份 WHY 文档，使分发包内同样包含并可从包内 README 打开。
-
-本版不含规则、Schema 或分发包结构的变更；PROTOCOL_VERSION 递增至 4.0.1。
-
-## 4.0.0 - 2026-09-16
+## 4.0.0 - 2026-09-17
 
 ### 定位与分发
 
 - 将计划审批和任务委托设为并列治理模式；严格控制不再只能依赖旧版本。
 - 三个包：GlobalRules Only、Plan Approval、Task Delegation；全局规则完全相同。
-- GOVERNANCE_MODE 与 RECORD_MODE 分离。计划审批默认 TRACKED；任务委托默认 AUTO，并保留 FAST 升级条件。
+- GOVERNANCE_MODE 与 RECORD_MODE 分离。计划审批始终 TRACKED；任务委托默认 AUTO，实际交付任务进入 TRACKED。
 - 共用规则源和入口模板，由两个 profile 生成安装入口；普通用户直接使用 ZIP，不安装构建模板。
 
 ### 审批与状态
@@ -28,7 +31,9 @@
 - 计划审批保留需求确认、精确计划修订批准、实质范围变化重新审批和人工验收后关闭。
 - 明确计划审批不是每条工具调用或每个步骤都重新批准；用户可指定更细关卡。
 - 任务委托在真实任务授权范围内持续执行，保留具体外部授权、先审计划及人工验收等用户关卡。
-- 新增 decisions.md、稳定 DECISION_ID，以及精确计划/候选/动作/关卡绑定。
+- 每个顶层对话对应工作区根 `tasks/task<N>_YYYYMMDD_<任务名>/` 中的一个 Task；多个 Task 可以指向同一项目。
+- 六个账本集中在任务的 `.agent-state/`，该目录默认忽略；任务目录仍可容纳项目文件和产物。
+- 新增 decisions.md、稳定 DECISION_ID，以及精确 Goal/Plan/交付/动作/关卡绑定。
 - 分开活动 PLAN_REF 与待批 PROPOSED_PLAN_REF，提案追加不会自动激活或覆盖旧批准。
 - 分开 AGENT_COMPLETION 与 ACCEPTANCE_STATUS；计划审批待验收不能 DONE。
 - 恢复核验授权来源、精确目标及用户关卡，旧计划批准/旧候选接受不能覆盖新版本。
@@ -36,21 +41,25 @@
 
 ### 共用机制与文档
 
-- 保留按动作加载、Search First / Read Narrow、独立不可回写快照、prev/next 中断修复、外部 INTENT/RESULT 和未知结果先查询。
-- 明确同任务及项目索引的单写入者要求。
+- 全局 AGENTS 改为原则入口，并将 `.git`/`.gitignore`、`.venv`/依赖、实现、验证、证据、外部动作和协作纪律拆为七个按动作加载模块。
+- Task 固定维护六个核心账本与 `cases/` 经验库；Current State 是唯一可覆写的核心账本，其余账本 append-only。
+- 所有快照连续追加到一个 `snapshots.md`，不创建快照目录或逐快照文件。
+- History 作为检索索引保存关键词/摘要、Plan/Decision Ref 以及 Snapshot 开始/结束行号。
+- Case index 保存简短摘要、触发场景和详情指针；同根因第三次出现时提醒用户决定是否固化，并由 History 关联 Case/Decision/Plan/Snapshot。
+- 新增 `checkpoint.py`：原子替换 Current、追加 Snapshot/History、逐步刷盘、校验引用和行号，并能在部分写入后幂等恢复。
 - 调整 GlobalRules 默认行动条款，使其遵守所选项目治理和验收关卡，GlobalRules Only 仍独立可用。
-- 重写中英文概览，增加安装、迁移、模式切换和 26 个实际行为验收场景。
+- 重写中英文概览、安装、迁移和实际行为检查。
 - 保留原 legacy/v1、初始发布证据，并将 v3 活跃规则原文保存在 legacy/v3。
 
 ### 构建与验证方法
 
 - 新增无外部依赖的可复现 ZIP 构建，使用白名单、包内文件哈希、三个包的 SHA256SUMS 和发布清单。
-- 新增源码引用/配置/模板/枚举检查、包内容与源字节检查、审批和验收数据约束检查及维护者测试。
-- 数据约束与包结构检查不等于真实 Agent 行为回归；未宣称 B01–B26 已在各模型/宿主运行，不提供 Token 节省百分比或零故障保证。
+- 新增源码结构、包内容、清单哈希、六文件布局、单一 Snapshot 文件、History 行号和部分提交恢复测试。
+- 自动检查不等于所有模型/宿主上的真实行为回归，不提供零故障保证。
 
 ### 破坏性兼容变化
 
-- 新记录 Schema 为 PAPOP-*-4，新增决定账本与治理/待批/验收字段；旧任务不能原样当 v4 状态读取。
+- 新记录 Schema 为 PAPOP-*-4；旧任务、项目级状态、索引文件和多快照目录不能原样当 v4 状态读取。
 - 原 ProjectRules/AGENTS.md 源变为 AGENTS.template.md，两个分发包仍提供可直接安装的 AGENTS.md。
 - 旧任务仅在需要继续时按 docs/MIGRATION.md 核实并迁移，旧记录不删除或批量改写。
 

@@ -1,42 +1,25 @@
-# 共用检查点、历史与压缩前保存
+# 检查点、锁与机器验证
 
-## 触发与职责
+## 平台入口
 
-正式计划创建/修订/激活；真实用户决定；步骤完成或需保留进展；交付待验收；等待/阻塞/关闭/取消/返工重开；外部动作前后；用户保存或准备压缩。
+- Windows：`.agent-protocol/tools/checkpoint.cmd ...`
+- Linux/macOS：`sh .agent-protocol/tools/checkpoint.sh ...`
 
-current_state 完整且短小；decisions 保存人类决定；plan 保存提案；history 只追加增量及快照指针；snapshots 保存该事件时完整状态，不能回写。
+若 Windows 参数路径含 `%`、`!`、`&`、`^` 等 CMD 元字符，直接用 PowerShell 的 `-File checkpoint.ps1` 和参数数组调用；不要把该路径拼成 `cmd.exe` 命令文本。CMD 可能在批处理收到参数前改写参数。
 
-## 编号和写入顺序
+两个实现必须具有相同命令、退出码、输出标记和账本字节格式。账本统一 UTF-8 无 BOM、LF、一个末尾换行；CMD 只负责调用 PowerShell，绝不处理账本内容。
 
-多文件写入不一定原子化，按以下顺序保存并允许恢复：
+## 提交顺序
 
-1. **收集事实**：核对当前模式、活动/待批计划、审批与用户关卡、候选和人工验收、步骤证据及未知外部动作。没有用户决定不制造批准，步骤未达验收不标完成。
-2. **分配编号**：搜索 history 的 EVENT_ID，并检查现有 snapshots，取下一个未使用 E 编号；不依赖只读 current_state 的最后编号。同 ID 不同内容先修复。
-3. **提交前置记录**：本事件涉及新计划或人类决定时先追加相应完整块并读回。记录类型与引用必须属于实际发生的决定；追加不确定先查询已有 ID。
-4. **生成 next**：使用当前模板和有关 Schema 写 current_state.next.md。原样继承稳定目标、约束、已完成证据和失败路线，合并新事实及审批/验收引用，设置同一 LAST_EVENT_ID/TYPE/SNAPSHOT。
-5. **校验 next**：读回字段、枚举、模式、引用、路径、步骤和允许下一动作；按 governance 核对授权有效性。待批提案不可成为活动已批准计划，人工待验收不可 DONE。
-6. **保存 prev**：当前有效时文件复制为 current_state.prev.md；不让模型重新生成副本。
-7. **替换 current**：用宿主可用的安全替换方法将 next 置为 current_state。不能原子替换时保留 prev 并读回；不得宣称整个多文件保存是原子事务。
-8. **复制 snapshot**：复制 current_state 为 snapshots/<EVENT_ID>.md，核对字节一致。已有同 ID 同内容不重复，不同内容不覆盖。
-9. **追加 history**：精确搜索 EVENT_ID，未存在才追加对应事件；已存在须核对全部关联字段和快照，不能仅因 ID 相同忽略冲突。
-10. **更新索引**：任务创建/激活/重开、等待、阻塞、完成、取消时由唯一索引写入者追加 task_index 事件并更新 active；普通步骤不写项目索引。编号先核对已有记录。
-11. **读回验收**：核对 current 的 LAST_EVENT_ID/TYPE/SNAPSHOT、snapshot 字节、history 唯一事件、活动/待批计划、用户决定引用、候选和下一允许动作。涉及索引变化也核对指针。全部一致才报告已保存。
+1. 原子取得 `.agent-work/locks/<TASK_ID>.lock/`；失败即停止。
+2. 在替换 Current 前校验路径边界、布局、字段、枚举、序号、模式关卡、所有 Ref、Case 次数和 next-state。
+3. 预生成 Snapshot 与 History 所需哈希；临时文件与目标位于同一文件系统。
+4. 原子替换 `current_state.md`。
+5. 向唯一的 `snapshots.md` 追加完整 Current 字节；计算完整快照块实际开始/结束行号及块哈希。
+6. 向 `history.md` 追加带 Plan/Decision/Case Ref 与 Snapshot 行号的索引块。
+7. 脚本重新读取并验证 Current、Snapshot、History、哈希和行号一致。
+8. 删除成功事务文件并释放锁。
 
-任一步失败先说明最后成功环节和残留文件，按 recovery.md 修复；未修复不能声称可安全压缩。业务执行成功与状态保存成功是两个结果，不因为记账失败盲目重新施工。
+提交支持在 Current 替换后或 Snapshot 追加后崩溃的幂等恢复。同一 ID 内容不同必须失败。锁异常时先检查事务状态，不盲目删除。
 
-## 保存后是否继续
-
-- 治理允许且无覆盖当前动作的关卡：简报事件、里程碑、current_state 路径及下一动作，然后继续。
-- PLAN_APPROVAL 待确认需求、待批新计划、实质范围变化暂停或待人工验收：保存不会释放关卡；提出具体可审阅决定并等待。
-- TASK_DELEGATION 等待具体授权/用户关卡时：不继续被覆盖动作，其余当前授权允许工作可继续。
-- 普通 STEP_COMPLETED 不引入额外逐步批准；用户明确指定逐步关卡时遵守。
-
-## 用户准备压缩
-
-1. 停止启动新计划步骤、委派和外部动作。正在运行的操作可安全收取则收取；否则保存进程/任务 ID、查询方法和真实状态，不谎称已经停止。
-2. FAST 升级 TRACKED，只记已有事实和当前有效任务授权；没有正式计划也可 PLAN_REF: NONE，不补造过去计划或批准。
-3. 保存 PRE_COMPACTION，RESUME_MODE: READY_FOR_COMPACTION。原有 WORKFLOW_PHASE、STATUS、批准和验收状态保持真实；未完成不标 DONE。
-4. 完整保存目标、约束、活动/待批计划、决定引用、关卡、证据、候选与人工反馈、失败路线、未知动作及下一允许动作。
-5. 核验后报告事件与恢复路径，等待用户压缩或继续。用户明确要求保存后继续时，仍须满足当前治理许可。
-
-上下文占用和压缩由用户或宿主管理，模型不假装观察不可见 Token，不自行设定通用阈值。
+只有 `CHECKPOINT_COMMITTED` 表示成功；`verify` 必须只读并输出 `TASK_STATE_VALID`。模型不得人工补写三个生成账本。

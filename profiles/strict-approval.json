@@ -1,0 +1,5 @@
+{
+  "id": "strict-approval",
+  "name": "严格审批模式 / Strict Approval",
+  "governance_mode": "STRICT_APPROVAL"
+}

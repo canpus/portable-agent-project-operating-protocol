@@ -1,0 +1,104 @@
+flowchart TB
+    START([开始对话]) --> TASK{是否已有对应 Task？}
+
+    TASK -- 否 --> CREATE[确认开始项目<br/>选择严格审批或自主推进]
+    TASK -- 是 --> SELECT[确认继续哪个 Task]
+    CREATE --> RECOVER
+    SELECT --> RECOVER
+
+    RECOVER[恢复共同事实<br/>验证账本和实际文件<br/>读取 goal.md、current_state.md、Case 索引和最近 History]
+    RECOVER --> RESTATE[Agent 复述<br/>最终目标、当前阶段、已有批准、待办和下一步]
+    RESTATE --> CHECK{用户确认复述正确？}
+    CHECK -- 否 --> FIX[用户纠正遗漏或错误]
+    FIX --> RECOVER
+    CHECK -- 是 --> MODE{当前 Task 的治理模式}
+
+    subgraph STRICT["严格审批模式"]
+        direction TB
+
+        S1[需求讨论与澄清]
+        S2{用户确认需求}
+        S3[形成 Goal]
+        S4{用户审批 Goal}
+        S5[撰写当前 Stage 的 Plan]
+        S6{用户认真阅读并审批 Plan}
+        S7[按批准的 Plan 施工]
+        S8[脚本、测试或 diff 验证]
+        S9{机器验证通过？}
+        S10[整理交付物与验证证据]
+        S11{用户验收实际交付物}
+        S12[Stage 结束]
+        S13{最终 Goal 达成？}
+        S14[进入下一 Stage<br/>重新撰写阶段 Plan]
+        S15([Task 完成])
+        SR1[继续澄清]
+        SR2[修订 Goal]
+        SR3[修订 Plan]
+        SR4[返工<br/>若超出原 Plan，先重新审批]
+
+        S1 --> S2
+        S2 -- 不通过 --> SR1 --> S1
+        S2 -- 通过 --> S3 --> S4
+        S4 -- 不通过 --> SR2 --> S4
+        S4 -- 通过 --> S5 --> S6
+        S6 -- 不通过 --> SR3 --> S6
+        S6 -- 通过 --> S7 --> S8 --> S9
+        S9 -- 不通过 --> SR4 --> S7
+        S9 -- 通过 --> S10 --> S11
+        S11 -- 不通过 --> SR4
+        S11 -- 通过 --> S12 --> S13
+        S13 -- 否 --> S14
+        S13 -- 是 --> S15
+    end
+
+    subgraph AUTO["自主推进模式"]
+        direction TB
+
+        A1[澄清最终目标和授权范围]
+        A2{用户已授权整个 Task？}
+        A3[Agent 整理 Goal 和 Stage Plan]
+        A4[在授权范围内持续施工]
+        A5[脚本、测试或 diff 验证]
+        A6{验证通过？}
+        A7[诊断并返工]
+        A8[整理阶段交付物与证据]
+        A9{存在用户设置的验收关卡？}
+        A10{用户验收通过？}
+        A11[Stage 结束]
+        A12{最终 Goal 达成？}
+        A13[进入下一 Stage]
+        A14([Task 完成])
+
+        A1 --> A2
+        A2 -- 否 --> A1
+        A2 -- 是 --> A3 --> A4 --> A5 --> A6
+        A6 -- 否 --> A7 --> A4
+        A6 -- 是 --> A8 --> A9
+        A9 -- 是 --> A10
+        A10 -- 不通过 --> A7
+        A10 -- 通过 --> A11
+        A9 -- 否 --> A11
+        A11 --> A12
+        A12 -- 否 --> A13
+        A12 -- 是 --> A14
+    end
+
+    MODE -- 严格审批 --> S1
+    MODE -- 自主推进 --> A1
+
+    S14 -. 回到下一阶段计划流程 .-> S5
+    A13 -. 回到下一阶段自主执行 .-> A3
+
+    GATE[任何模式都可能暂停：<br/>缺少关键决定、需要具体授权、用户设置关卡、准备修改最终 Goal]
+    GATE --> DECIDE{用户明确决定}
+    DECIDE --> RESUME[记录决定并返回原暂停点]
+
+    classDef user fill:#fff2cc,stroke:#b8860b,stroke-width:2px;
+    classDef agent fill:#dae8fc,stroke:#376fa3;
+    classDef machine fill:#e1d5e7,stroke:#76528b;
+    classDef state fill:#d5e8d4,stroke:#4e8b49;
+
+    class TASK,CHECK,MODE,S2,S4,S6,S11,S13,A2,A9,A10,A12,DECIDE user;
+    class RECOVER,RESTATE,FIX,S1,S3,S5,S7,S10,SR1,SR2,SR3,SR4,A1,A3,A4,A7,A8,GATE,RESUME agent;
+    class S8,S9,A5,A6 machine;
+    class CREATE,SELECT,S12,S14,S15,A11,A13,A14 state;

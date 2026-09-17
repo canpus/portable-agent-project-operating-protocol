@@ -1,0 +1,146 @@
+flowchart TB
+    START([收到消息或恢复任务])
+    START --> VERIFY[运行只读 verify]
+    VERIFY --> READ[读取 goal.md 和 current_state.md<br/>读取 Case 索引与最近 History]
+    READ --> CHECK[核对实际文件、diff、测试和外部状态]
+    CHECK --> EXIST{是否已有 Task}
+
+    EXIST -->|否| INIT[初始化 Task<br/>创建六个核心账本和 cases/index.md]
+    EXIST -->|是| SESSION[分配新的 SESSION_ID<br/>保留原 PHASE]
+    INIT --> ONBOARD[TASK_ONBOARDING]
+    SESSION --> ONBOARD
+    ONBOARD --> MODE{GOVERNANCE_MODE}
+
+    subgraph STRICT["严格审批模式"]
+        direction TB
+
+        SRD["REQUIREMENTS_DISCUSSION<br/>执行中"]
+        SAR["AWAITING_REQUIREMENTS_CONFIRMATION<br/>等待用户"]
+        SGD["GOAL_DRAFTING<br/>执行中"]
+        SAG["AWAITING_GOAL_APPROVAL<br/>等待用户"]
+        SPD["PLAN_DRAFTING<br/>执行中"]
+        SAP["AWAITING_PLAN_APPROVAL<br/>等待用户"]
+        SIM["IMPLEMENTATION<br/>Agent 施工中"]
+        SVE["VERIFYING<br/>机器验证中"]
+        SAA["AWAITING_DELIVERY_ACCEPTANCE<br/>Agent 已完成，等待用户验收"]
+        SRW["REWORKING<br/>返工中"]
+        SSC["STAGE_CLOSED<br/>阶段已关闭"]
+
+        SRD -->|CP1 保存需求草案| SAR
+
+        SAR -->|追加需求确认 Decision 然后 CP2| SGD
+        SAR -.->|追加需求拒绝 Decision 然后 CP| SRD
+
+        SGD -->|追加 Goal Revision 然后 CP3| SAG
+
+        SAG -->|追加 Goal 批准 Decision 然后 CP4| SPD
+        SAG -.->|追加 Goal 拒绝 Decision| SGD
+
+        SPD -->|追加 Plan Revision 然后 CP5| SAP
+
+        SAP -->|追加 Plan 批准 Decision 然后 CP6| SIM
+        SAP -.->|追加 Plan 拒绝 Decision| SPD
+
+        SIM -->|CP7 保存施工状态和证据| SVE
+
+        SVE -->|验证通过并记录 Delivery 然后 CP8| SAA
+        SVE -.->|验证失败并记录根因然后 CP| SRW
+
+        SAA -->|追加交付验收 Decision 然后 CP9| SSC
+        SAA -.->|追加交付拒绝 Decision 然后 CP| SRW
+
+        SRW -->|仍在原 Plan 范围内| SIM
+        SRW -.->|需要实质修改 Plan| SPD
+    end
+
+    subgraph AUTO["自主推进模式"]
+        direction TB
+
+        AUTH["追加 TASK_AUTHORIZED<br/>然后执行 CP-A1"]
+        APD["PLAN_DRAFTING<br/>Agent 整理 Goal 和 Plan"]
+        AIM["IMPLEMENTATION<br/>在授权范围内施工"]
+        AVE["VERIFYING<br/>机器验证中"]
+        ARW["REWORKING<br/>诊断和返工"]
+        GATE{是否存在用户验收关卡}
+        AWA["AWAITING_DELIVERY_ACCEPTANCE<br/>Agent 已完成，等待用户"]
+        ASC["STAGE_CLOSED<br/>阶段已关闭"]
+
+        AUTH --> APD
+        APD -->|追加 Goal 和 Plan 然后 CP-A2| AIM
+        AIM -->|CP-A3 保存施工状态和证据| AVE
+
+        AVE -->|验证失败并记录根因然后 CP| ARW
+        ARW --> AIM
+
+        AVE -->|验证通过并记录 Delivery 然后 CP-A4| GATE
+        GATE -->|有| AWA
+        GATE -->|没有，验收状态为 NOT_REQUIRED| ASC
+
+        AWA -->|追加交付验收 Decision 然后 CP-A5| ASC
+        AWA -.->|追加交付拒绝 Decision 然后 CP| ARW
+    end
+
+    MODE -->|STRICT_APPROVAL| SRD
+    MODE -->|AUTONOMOUS| AUTH
+
+    SSC --> RESULT
+    ASC --> RESULT
+
+    RESULT{最终 Goal 是否达成}
+    RESULT -->|是| COMPLETE([Task 完成])
+    RESULT -->|否| NEXT[分配新的 STAGE_ID<br/>回到对应模式的 Plan 撰写阶段]
+
+    subgraph SPECIAL["不改变当前 PHASE 的特殊处理"]
+        direction LR
+
+        PRE["准备压缩上下文<br/>先执行 CP<br/>然后停止启动新工作"]
+
+        RESTORE["压缩后或更换模型<br/>分配新 SESSION_ID<br/>重新读取 goal.md 并恢复"]
+
+        BLOCKED["无法继续<br/>PHASE 改为 BLOCKED<br/>执行 CP"]
+
+        CANCELLED["用户取消任务<br/>追加 TASK_CANCELLED<br/>PHASE 改为 CANCELLED<br/>执行 CP"]
+    end
+
+    subgraph CP["每个 CP 的固定写入顺序"]
+        direction LR
+
+        C1[取得 Task 锁]
+        C2[写入前验证]
+        C3[原子覆写 current_state.md]
+        C4[追加完整状态到 snapshots.md]
+        C5[计算 Snapshot 起止行和哈希]
+        C6[追加 history.md 索引]
+        C7[重新读取并验证]
+        C8{验证成功}
+        C9[输出 CHECKPOINT_COMMITTED]
+        C10[保持失败<br/>不得视为成功]
+
+        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8
+        C8 -->|是| C9
+        C8 -->|否| C10
+    end
+
+    subgraph FILES["各文件的写入责任"]
+        direction LR
+
+        F1["Agent 追加<br/>goal.md"]
+        F2["Agent 追加<br/>plan.md"]
+        F3["Agent 根据用户原话追加<br/>decisions.md"]
+        F4["checkpoint 脚本覆写<br/>current_state.md"]
+        F5["checkpoint 脚本追加<br/>snapshots.md"]
+        F6["checkpoint 脚本追加<br/>history.md"]
+        F7["用户批准后追加<br/>cases/index.md 和详细 Case"]
+    end
+
+    classDef user fill:#fff2cc,stroke:#b8860b,stroke-width:2px;
+    classDef agent fill:#dae8fc,stroke:#376fa3;
+    classDef machine fill:#e1d5e7,stroke:#76528b;
+    classDef state fill:#d5e8d4,stroke:#4e8b49;
+    classDef stopped fill:#f8cecc,stroke:#b85450;
+
+    class EXIST,MODE,GATE,RESULT,C8 user;
+    class READ,CHECK,SRD,SGD,SPD,SIM,SVE,SRW,APD,AIM,AVE,ARW agent;
+    class VERIFY,C1,C2,C5,C7,C8,C9,C10 machine;
+    class INIT,SESSION,ONBOARD,SAR,SAG,SAP,SAA,SSC,AUTH,AWA,ASC,NEXT,C3,C4,C6 state;
+    class BLOCKED,CANCELLED stopped;

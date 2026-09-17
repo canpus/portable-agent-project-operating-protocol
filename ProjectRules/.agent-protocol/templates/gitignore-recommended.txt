@@ -1,0 +1,24 @@
+# Workspace-level PAPOP temporary files
+.agent-work/
+
+# Workspace repository: per-Task state
+tasks/*/.agent-state/
+
+# Task repository: use this instead
+# .agent-state/
+
+# Add only when applicable to this project:
+# .venv/
+# __pycache__/
+# *.py[cod]
+# .pytest_cache/
+# .mypy_cache/
+# .ruff_cache/
+# .coverage
+# htmlcov/
+# node_modules/
+# .DS_Store
+# Thumbs.db
+# .env
+# .env.*
+# !.env.example

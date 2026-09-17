@@ -1,0 +1,20 @@
+* text=auto
+
+*.md text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.txt text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+LICENSE text eol=lf
+VERSION text eol=lf
+
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.zip binary
