@@ -20,3 +20,4 @@ VERSION text eol=lf
 *.bat text eol=crlf
 
 *.zip binary
+*.pdf binary

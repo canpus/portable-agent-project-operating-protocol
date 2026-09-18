@@ -1,6 +1,6 @@
 # Portable Agent Project Operating Protocol v5.0.2
 
-[中文](README.md) · [WHY: why use a state machine](docs/WHY_EN.md) · [HOW: how it works](docs/HOW_EN.md) · [Installation](docs/INSTALL.md) · [Migration](docs/MIGRATION.md)
+[中文](README.md) · [WHY: why use a state machine](docs/WHY_EN.md) · [HOW: how it works](docs/HOW_EN.md) · [Installation](docs/INSTALL.md) · [Migration](docs/MIGRATION.md) · [Windows illustrated guide (Chinese)](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf) · [Design notes #001](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-Make-AI-Remember-Like-a-Human_EN.md)
 
 PAPOP is a portable set of working rules and a project state machine for Agents.
 
@@ -49,6 +49,8 @@ Autonomous does not mean unsupervised access to everything. Actions outside the 
 5. Start a fresh session. Ask the Agent which instructions it actually loaded, which governance mode is the workspace default, and run the installation check.
 
 Exact paths and checks for Codex, Claude Code, OpenCode, ZCode, and DeepSeek Harness on Windows, Linux, and macOS are in [INSTALL.md](docs/INSTALL.md). PAPOP's end-user scripts need no extra Python, Node, or Mermaid installation. Windows uses the bundled CMD and PowerShell entries; Linux and macOS use the bundled POSIX Shell entries.
+
+Windows readers can also follow the screenshot-based walkthrough: [PAPOP v5.0.2 illustrated installation and usage guide](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf). It covers v5.0.2, Windows, and the Strict Approval package only, and is available in Chinese only.
 
 ## Workspace layout
 
@@ -103,6 +105,8 @@ Only `CHECKPOINT_COMMITTED` means the save succeeded. Read-only verification mus
 - [INSTALL: five harnesses and three operating systems](docs/INSTALL.md)
 - [MIGRATION: moving an older task to v5](docs/MIGRATION.md)
 - [BEHAVIOR_CHECKS: observable checks after installation](docs/BEHAVIOR_CHECKS.md)
+- [Illustrated installation and usage guide (PDF, Chinese only, Windows, v5.0.2)](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf)
+- [Design philosophy #001: Make AI Remember Like a Human](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-Make-AI-Remember-Like-a-Human_EN.md) — Chinese original: [让 AI 像人一样记忆](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-让AI像人一样记忆.md)
 - [CHANGELOG](CHANGELOG.md)
 
 The detailed WHY, HOW, installation, and migration documents are currently maintained in Chinese; this English README contains the complete everyday-user overview.

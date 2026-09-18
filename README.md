@@ -1,6 +1,6 @@
 # Portable Agent Project Operating Protocol v5.0.2
 
-[English](README_EN.md) · [为什么要用状态机](docs/WHY.md) · [状态机怎样工作](docs/HOW.md) · [安装指南](docs/INSTALL.md) · [从旧版迁移](docs/MIGRATION.md)
+[English](README_EN.md) · [为什么要用状态机](docs/WHY.md) · [状态机怎样工作](docs/HOW.md) · [安装指南](docs/INSTALL.md) · [从旧版迁移](docs/MIGRATION.md) · [Windows 图文安装指南](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf) · [设计思路 #001](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-让AI像人一样记忆.md)
 
 PAPOP 是一套给 Agent 使用的工作规则和项目状态机。
 
@@ -49,6 +49,8 @@ Autonomous 也不是“放任不管”。授权范围之外的动作仍然需要
 5. 开始一个全新 Session，让 Agent 说明它实际加载了哪些规则、当前工作区默认是哪种模式，并运行一次安装检查。
 
 Codex、Claude Code、OpenCode、ZCode、DeepSeek Harness 在 Windows、Linux 和 macOS 上的具体位置与验证方法见 [安装指南](docs/INSTALL.md)。终端用户不需要另外安装 Python、Node 或 Mermaid；Windows 使用包内 CMD/PowerShell 工具，Linux 和 macOS 使用包内 POSIX Shell 工具。
+
+Windows 用户也可以直接照带截图的分步教程走：[PAPOP v5.0.2 图文安装与使用指南](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf)。该指南对应 v5.0.2，只覆盖 Windows 与 Strict Approval 包，且只有中文版；其他平台与其他包仍以上面两个文件为准。
 
 ## 工作区长什么样
 
@@ -105,6 +107,8 @@ Case 位于 `.agent-state/cases/`。同一 Task 中，同一个已确认根因�
 - [INSTALL：五个 Harness 和三大操作系统的安装方法](docs/INSTALL.md)
 - [MIGRATION：从旧版本迁移到 v5](docs/MIGRATION.md)
 - [BEHAVIOR_CHECKS：安装后应该实际检查什么](docs/BEHAVIOR_CHECKS.md)
+- [图文安装与使用指南：Windows 分步截图版（中文，对应 v5.0.2）](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf)
+- [设计思路 #001：让 AI 像人一样记忆](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-让AI像人一样记忆.md)（[English](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/philosophy/01-Make-AI-Remember-Like-a-Human_EN.md)）
 - [CHANGELOG：版本变化](CHANGELOG.md)
 
 ## 能做什么，不能保证什么

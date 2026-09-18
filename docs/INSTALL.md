@@ -1,5 +1,7 @@
 # 安装 v5.0.2
 
+> **图文版**：带截图的分步安装与使用说明见 [PAPOP v5.0.2 图文安装与使用指南](https://github.com/canpus/portable-agent-project-operating-protocol/blob/main/docs/guides/PAPOP-v5.0.2-strict-approval-windows-guide-zh.pdf)。该指南对应 v5.0.2，只覆盖 Windows 与 Strict Approval 包，且只有中文版；本页仍是所有平台与三种包的通用依据。
+
 ## 选择包
 
 - GlobalRules Only：不需要状态机。
